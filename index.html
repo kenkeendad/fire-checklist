@@ -130,13 +130,25 @@ body{background:var(--c-bg3);color:var(--c-text);font-family:-apple-system,Blink
   body > :not(#print-area) { display: none !important; }
   body { background: #fff; padding: 0; margin: 0; min-height: auto; }
   #print-area { display: block !important; width: 100%; font-family: 'PingFang TC', '微軟正黑體', sans-serif; background: #fff; color: #000; }
+  
   .print-header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #000; padding-bottom: 15px; }
   .print-header h1 { font-size: 24px; margin: 0 0 12px 0; }
   .print-meta { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 8px; }
-  .print-table { width: 100%; border-collapse: collapse; margin-bottom: 24px; font-size: 13px; page-break-inside: avoid; }
+  
+  /* 設定每個建築區塊結束後強制換頁 */
+  .print-bld-section { page-break-after: always; break-after: page; padding-bottom: 15px; }
+  
+  /* 將表格取消 page-break-inside: avoid，讓過長的表格可以自然跨頁 */
+  .print-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 13px; }
+  
+  /* 確保每一列內容不被從中間切斷 */
+  .print-table tr { page-break-inside: avoid; break-inside: avoid; }
+  
   .print-table th, .print-table td { border: 1px solid #000; padding: 8px 10px; text-align: left; }
   .print-table th { background-color: #e5e5e5 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  .print-bld-title { font-size: 16px; font-weight: bold; margin: 0; background: #d4e3f0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; padding: 8px 10px; border: 1px solid #000; border-bottom: none; }
+  
+  /* 確保標題跟表格死死黏在一起，不會標題在上一頁，表格在下一頁 */
+  .print-bld-title { font-size: 16px; font-weight: bold; margin: 0; background: #d4e3f0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; padding: 8px 10px; border: 1px solid #000; border-bottom: none; page-break-after: avoid; break-after: avoid; }
   
   .print-ok { color: #A32D2D !important; font-weight: bold; } 
   .print-no { color: #666666 !important; } 
@@ -239,6 +251,8 @@ function printReportToPDF() {
     const dn2 = bkeys.filter(k => chk[k]).length;
     if (bkeys.length === 0) return;
 
+    // 將每個棟別用 print-bld-section 包起來，確保印完這棟就換頁
+    html += `<div class="print-bld-section">`;
     html += `<div class="print-bld-title">${b.name} (已複查: ${dn2}/${bkeys.length})</div>`;
     html += `<table class="print-table">
       <thead><tr><th width="35%">設備與條件</th><th width="45%">檢查項目</th><th width="20%">複查狀態</th></tr></thead>
@@ -249,7 +263,6 @@ function printReportToPDF() {
       cg.items.forEach((it, ii) => {
         const k = mkKey(b.id, ci, ii);
         const ok = !!chk[k];
-        // 修正：將項目與條件整合在同一個欄位內顯示
         html += `<tr>
           <td><strong>項目：</strong>${c.name}<br><span style="color:#555;font-size:12px;"><strong>條件：</strong>${c.law}</span></td>
           <td>${it.label}</td>
@@ -257,12 +270,12 @@ function printReportToPDF() {
         </tr>`;
       });
     });
-    html += `</tbody></table>`;
+    html += `</tbody></table></div>`;
   });
 
-  // 2. 生成附錄尾頁 (強制換頁，且標題純文字無圖示)
+  // 2. 生成附錄尾頁 (因為上一個 section 已經強迫換頁，這裡就不需要再 forced page break 了)
   html += `
-    <div style="page-break-before: always; padding-top: 10px;">
+    <div style="padding-top: 10px;">
       <div class="print-header" style="margin-bottom: 20px;">
         <h2>附錄：法源依據與檢修標準</h2>
       </div>
@@ -303,7 +316,6 @@ function copyReport(){
       cg.items.forEach((it,ii)=>{
         const k=mkKey(b.id,ci,ii);
         if(!catHdr){
-          // 修正：純文字也同步顯示 項目+條件
           txt+='  ［項目：'+c.name+'，條件：'+c.law+'］\n';
           catHdr=true;
         }
@@ -548,7 +560,7 @@ function render(){
     if(cb&&chk[k]){cb.checked=true;if(cell)cell.className='cell done';}
   });
 
-  // appendix 介面顯示 (保留原來的圖示，只在 PDF 拿掉)
+  // appendix 介面顯示
   const appCard=document.createElement('div');appCard.className='app-card';
   appCard.innerHTML=`<div class="app-title">附錄：法源依據對照表<div class="app-sub">各類消防設備對應法規條文與修繕標準</div></div>`;
   LAWS.forEach(law=>{

@@ -113,8 +113,10 @@ body{background:var(--c-bg3);color:var(--c-text);font-family:-apple-system,Blink
 .report-sec-title{font-size:13px;font-weight:600;color:var(--c-text);margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid var(--c-border);display:flex;justify-content:space-between;align-items:center}
 .report-item{font-size:12px;color:var(--c-text);padding:4px 0;display:flex;gap:6px;line-height:1.5;border-bottom:0.5px solid var(--c-border)}
 .report-item:last-child{border-bottom:none}
-.ri-ok{color:#3B6D11;font-weight:700;flex-shrink:0}
-.ri-no{color:#A32D2D;font-weight:700;flex-shrink:0}
+/* 修改 Modal 內的狀態顏色 */
+.ri-ok{color:#A32D2D;font-weight:700;flex-shrink:0} /* 已複查須修繕 (紅) */
+.ri-no{color:#999999;font-weight:700;flex-shrink:0} /* 待複查 (灰) */
+
 .modal-footer{display:flex;gap:8px;padding:12px 16px;border-top:1px solid var(--c-border);flex-wrap:wrap}
 .mbtn{flex:1;padding:11px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;min-width:80px;-webkit-tap-highlight-color:transparent}
 .mbtn-print{background:var(--c-blue);color:#fff}
@@ -136,8 +138,12 @@ body{background:var(--c-bg3);color:var(--c-text);font-family:-apple-system,Blink
   .print-table th, .print-table td { border: 1px solid #000; padding: 8px 10px; text-align: left; }
   .print-table th { background-color: #e5e5e5 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .print-bld-title { font-size: 16px; font-weight: bold; margin: 0; background: #d4e3f0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; padding: 8px 10px; border: 1px solid #000; border-bottom: none; }
-  .print-ok { color: #1a5c00 !important; font-weight: bold; }
-  .print-no { color: #a30000 !important; font-weight: bold; }
+  
+  /* 修改列印的狀態文字顏色 */
+  .print-ok { color: #A32D2D !important; font-weight: bold; } /* 已複查須修繕 */
+  .print-no { color: #666666 !important; } /* 待複查 */
+  
+  .print-appendix-item { border: 1px solid #000; padding: 12px; margin-bottom: 12px; border-radius: 6px; page-break-inside: avoid; }
   @page { size: A4; margin: 15mm; }
 }
 </style>
@@ -150,7 +156,7 @@ body{background:var(--c-bg3);color:var(--c-text);font-family:-apple-system,Blink
   <div class="top-stats">
     <div class="stat"><div class="sn r" id="s-tot">0</div><div class="sl">缺失總數</div></div>
     <div class="stat"><div class="sn g" id="s-dn">0</div><div class="sl">已複查</div></div>
-    <div class="stat"><div class="sn" id="s-pct">0%</div><div class="sl">完成率</div></div>
+    <div class="stat"><div class="sn" id="s-pct">0%</div><div class="sl">進度</div></div>
   </div>
   <div class="pb-global"><div class="pb-global-fill" id="pb-global" style="width:0%"></div></div>
 </div>
@@ -190,18 +196,19 @@ function openReport(){
   const now=new Date();
   const ts=now.getFullYear()+'/'+(now.getMonth()+1).toString().padStart(2,'0')+'/'+now.getDate().toString().padStart(2,'0')+' '+now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0');
   const tot=allKeys.length,dn=Object.values(chk).filter(Boolean).length;
-  let html=`<div class="report-meta">巡查日期：115/04/14<br>輸出時間：${ts}<br>已複查：${dn} / ${tot} 項（${Math.round(dn/tot*100)}%）<br>地點：新北市汐止區福德一路56號</div>`;
+  let html=`<div class="report-meta">巡查日期：115/04/14<br>輸出時間：${ts}<br>已複查進度：${dn} / ${tot} 項（${Math.round(dn/tot*100)}%）<br>地點：新北市汐止區福德一路56號</div>`;
   BLDS.forEach((b,bi)=>{
     const bkeys=allKeys.filter(k=>k.startsWith(b.id+'|'));
     const done=bkeys.filter(k=>chk[k]);
     const undone=bkeys.filter(k=>!chk[k]);
-    html+=`<div class="report-section"><div class="report-sec-title">${b.name} <span style="font-size:11px;font-weight:400;color:var(--c-text2)">${done.length}/${bkeys.length} 完成</span></div>`;
+    html+=`<div class="report-section"><div class="report-sec-title">${b.name} <span style="font-size:11px;font-weight:400;color:var(--c-text2)">${done.length}/${bkeys.length} 複查</span></div>`;
     b.cats.forEach((cg,ci)=>{
       const c=CATS[cg.cat];
       cg.items.forEach((it,ii)=>{
         const k=mkKey(b.id,ci,ii);
         const ok=!!chk[k];
-        html+=`<div class="report-item"><span class="${ok?'ri-ok':'ri-no'}">${ok?'✓':'✗'}</span><span>${it.label}</span></div>`;
+        // 修正彈出視窗的狀態文字
+        html+=`<div class="report-item"><span class="${ok?'ri-ok':'ri-no'}">${ok?'☑ 已複查須修繕':'☐ 待複查'}</span><span>${it.label}</span></div>`;
       });
     });
     html+='</div>';
@@ -214,7 +221,7 @@ function openReport(){
 function closeReport(){document.getElementById('modal-bg').className='modal-bg';}
 function bgClick(e){if(e.target===document.getElementById('modal-bg'))closeReport();}
 
-// 新增：輸出完整A4報告/PDF 功能
+// 輸出完整A4報告/PDF 功能 (包含尾頁附錄)
 function printReportToPDF() {
   const now = new Date();
   const ts = now.getFullYear() + '/' + (now.getMonth() + 1).toString().padStart(2, '0') + '/' + now.getDate().toString().padStart(2, '0') + ' ' + now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
@@ -229,14 +236,15 @@ function printReportToPDF() {
     </div>
   `;
 
+  // 1. 生成各棟缺失清單
   BLDS.forEach(b => {
     const bkeys = allKeys.filter(k => k.startsWith(b.id + '|'));
     const dn2 = bkeys.filter(k => chk[k]).length;
     if (bkeys.length === 0) return;
 
-    html += `<div class="print-bld-title">${b.name} (該棟進度: ${dn2}/${bkeys.length})</div>`;
+    html += `<div class="print-bld-title">${b.name} (已複查: ${dn2}/${bkeys.length})</div>`;
     html += `<table class="print-table">
-      <thead><tr><th width="20%">設備類別</th><th width="65%">檢查項目</th><th width="15%">狀態</th></tr></thead>
+      <thead><tr><th width="20%">設備類別</th><th width="55%">檢查項目</th><th width="25%">複查狀態</th></tr></thead>
       <tbody>`;
 
     b.cats.forEach((cg, ci) => {
@@ -244,15 +252,35 @@ function printReportToPDF() {
       cg.items.forEach((it, ii) => {
         const k = mkKey(b.id, ci, ii);
         const ok = !!chk[k];
+        // 修改列印的狀態文字
         html += `<tr>
           <td>${c.name}</td>
           <td>${it.label}</td>
-          <td class="${ok ? 'print-ok' : 'print-no'}">${ok ? '✔ 已改善' : '✘ 待處理'}</td>
+          <td class="${ok ? 'print-ok' : 'print-no'}">${ok ? '☑ 已複查須修繕' : '☐ 待複查'}</td>
         </tr>`;
       });
     });
     html += `</tbody></table>`;
   });
+
+  // 2. 生成附錄尾頁 (強制換頁)
+  html += `
+    <div style="page-break-before: always; padding-top: 10px;">
+      <div class="print-header" style="margin-bottom: 20px;">
+        <h2>附錄：法源依據與檢修標準</h2>
+      </div>
+  `;
+  
+  LAWS.forEach(law => {
+    html += `
+      <div class="print-appendix-item">
+        <h3 style="margin: 0 0 6px 0; font-size: 15px; display: flex; align-items: center;">${law.ico} ${law.name}</h3>
+        <p style="margin: 0 0 6px 0; font-size: 13px; line-height: 1.5;"><strong>法規依據：</strong>${law.ref}</p>
+        <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #222;"><strong>修繕原因標準：</strong>${law.plain}</p>
+      </div>
+    `;
+  });
+  html += `</div>`;
 
   document.getElementById('print-area').innerHTML = html;
   closeReport(); // 先關閉彈出視窗以免影響版面
@@ -266,19 +294,20 @@ function copyReport(){
   let txt='【伊登花園消防缺失複查報告】\n';
   txt+='巡查日期：115/04/14\n';
   txt+='輸出時間：'+ts+'\n';
-  txt+='完成度：'+dn+'/'+tot+'（'+Math.round(dn/tot*100)+'%）\n';
+  txt+='複查進度：'+dn+'/'+tot+'（'+Math.round(dn/tot*100)+'%）\n';
   txt+='━━━━━━━━━━━━━━\n';
   BLDS.forEach(b=>{
     const bkeys=allKeys.filter(k=>k.startsWith(b.id+'|'));
     const dn2=bkeys.filter(k=>chk[k]).length;
-    txt+='\n【'+b.name+'】 '+dn2+'/'+bkeys.length+'\n';
+    txt+='\n【'+b.name+'】已複查: '+dn2+'/'+bkeys.length+'\n';
     b.cats.forEach((cg,ci)=>{
       const c=CATS[cg.cat];
       let catHdr=false;
       cg.items.forEach((it,ii)=>{
         const k=mkKey(b.id,ci,ii);
         if(!catHdr){txt+='  ［'+c.name+'］\n';catHdr=true;}
-        txt+='  '+(chk[k]?'✓':'✗')+' '+it.label+'\n';
+        // 修改複製純文字的狀態
+        txt+='  '+(chk[k]?'[☑ 已複查須修繕]':'[☐ 待複查]')+' '+it.label+'\n';
       });
     });
   });
@@ -419,19 +448,19 @@ const LAWS=[
    plain:'偵煙器是系統自動發現火災的眼睛。壞掉就等於瞎了，初期火災沒人知道。不能因為它不叫就當沒事，要換掉。'},
   {ico:'🚪',bg:'var(--c-grn-bg)',name:'出口燈／標示燈',sev:false,
    ref:'設置標準 §146：出口燈、避難方向指示燈需24小時常亮；斷電後須由內建蓄電池自動切換，持續亮燈不得少於30分鐘。燈具故障（含燈管燒壞、電池失效）均需立即更換。',
-   plain:'停電的時候這些燈要靠自己的電池繼續亮30分鐘，讓大家找到逃生出口。燈壞掉不亮、或電池撐不到30分鐘，都算違規。'},
+   plain:'停電的時候這些燈要靠自己的電池繼續亮30分鐘，讓大家找到逃生出口。燈具故障不亮、或電池撐不到30分鐘，都算違規必須修繕。'},
   {ico:'🪜',bg:'var(--c-purple-bg)',name:'避難器具燈',sev:false,
    ref:'設置標準 §149：避難器具設置位置需以指示燈標示，燈具規格及持續供電要求比照 §146，斷電後電池維持≥30分鐘。',
    plain:'這個燈是告訴人「這裡有緩降機可以逃」。燈壞了大家在煙霧中找不到器材，30分鐘電池同樣是基本要求。'},
   {ico:'🔢',bg:'var(--c-purple-bg)',name:'樓梯間樓層燈',sev:false,
    ref:'建築技術規則 §92：樓梯間需設置足夠照明，停電後緊急照明需維持一定時間。設置標準 §148：樓層方向指示燈斷電後蓄電池供電維持≥30分鐘，確保逃生路線方向清晰。',
-   plain:'樓梯間的燈壞掉，逃生時走到黑漆漆的樓梯很容易跌倒或走錯方向。停電時要靠電池亮30分鐘，讓人順利走到安全出口。'},
+   plain:'樓梯間的燈壞掉，逃生時走到黑漆漆的樓梯很容易跌倒或走錯方向。停電時要靠電池亮至少30分鐘。'},
   {ico:'💡',bg:'var(--c-teal-bg)',name:'照明燈（走廊／梯間）',sev:false,
-   ref:'建築技術規則 §92：走廊、樓梯間應設置緊急照明；停電後緊急電源（發電機或蓄電池）需於10秒內自動切換，並維持≥30分鐘之照度（地面照度≥2 lux）。',
-   plain:'走廊跟樓梯的照明燈，停電10秒內要自動切緊急電源繼續亮，至少維持30分鐘，地板要亮到2 lux以上（小夜燈的亮度）。達不到就算不合格。'},
+   ref:'建築技術規則 §92：走廊、樓梯間應設置緊急照明；停電後緊急電源需於10秒內自動切換，並維持≥30分鐘之照度。',
+   plain:'走廊跟樓梯的照明燈，停電10秒內要自動切緊急電源繼續亮，至少維持30分鐘。達不到就算不合格。'},
   {ico:'➡',bg:'var(--c-gray-bg)',name:'地下室方向燈',sev:false,
-   ref:'設置標準 §146：地下層避難方向指示燈需指向最近安全梯或出口，雙面燈兩面均需正常；斷電後電池維持≥30分鐘。地下室能見度低，為重點設置區域。',
-   plain:'地下室沒有自然採光，一停電就全黑，是最危險的地方。方向燈要清楚指向出口，兩面燈都要亮，電池要撐30分鐘。任何一顆壞都可能讓人在地下室迷路。'},
+   ref:'設置標準 §146：地下層避難方向指示燈需指向最近安全梯或出口，雙面燈兩面均需正常；斷電後電池維持≥30分鐘。',
+   plain:'地下室沒有自然採光，方向燈要清楚指向出口，兩面燈都要亮，電池要撐30分鐘。任何一顆壞都可能讓人在地下室迷路。'},
 ];
 
 let chk={};
@@ -451,7 +480,7 @@ function updStats(){
     const pb=document.getElementById('pb-'+b.id);
     const bdg=document.getElementById('bdg-'+b.id);
     if(pb)pb.style.width=bt?Math.round(bd/bt*100)+'%':'0%';
-    if(bdg){bdg.textContent=bd+'/'+bt+' 已完成';bdg.className='bdg '+(bd===bt&&bt>0?'bdg-g':'bdg-r')}
+    if(bdg){bdg.textContent=bd+'/'+bt+' 已複查';bdg.className='bdg '+(bd===bt&&bt>0?'bdg-g':'bdg-r')}
   });
 }
 
@@ -519,9 +548,9 @@ function render(){
     if(cb&&chk[k]){cb.checked=true;if(cell)cell.className='cell done';}
   });
 
-  // appendix
+  // appendix 介面顯示
   const appCard=document.createElement('div');appCard.className='app-card';
-  appCard.innerHTML=`<div class="app-title">附錄：法源依據對照表<div class="app-sub">各類消防設備對應法規條文與白話說明</div></div>`;
+  appCard.innerHTML=`<div class="app-title">附錄：法源依據對照表<div class="app-sub">各類消防設備對應法規條文與修繕標準</div></div>`;
   LAWS.forEach(law=>{
     const item=document.createElement('div');item.className='law-item';
     item.innerHTML=`<div class="law-head">
@@ -529,7 +558,7 @@ function render(){
         <div class="law-name">${law.name}${law.sev?'<span class="tag tag-r">優先</span>':''}</div>
       </div>
       <div class="law-ref">${law.ref}</div>
-      <div class="law-plain"><div class="law-plain-label">白話說明</div>${law.plain}</div>`;
+      <div class="law-plain"><div class="law-plain-label">修繕原因標準</div>${law.plain}</div>`;
     appCard.appendChild(item);
   });
   con.appendChild(appCard);

@@ -195,36 +195,26 @@ function copyReport(){
   const now=new Date();
   const ts=now.getFullYear()+'/'+(now.getMonth()+1).toString().padStart(2,'0')+'/'+now.getDate().toString().padStart(2,'0')+' '+now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0');
   const tot=allKeys.length,dn=Object.values(chk).filter(Boolean).length;
-  let txt='【伊登花園消防缺失複查報告】
-';
-  txt+='巡查日期：115/04/14
-';
-  txt+='輸出時間：'+ts+'
-';
-  txt+='完成度：'+dn+'/'+tot+'（'+Math.round(dn/tot*100)+'%）
-';
-  txt+='━━━━━━━━━━━━━━
-';
+  let txt='【伊登花園消防缺失複查報告】\n';
+  txt+='巡查日期：115/04/14\n';
+  txt+='輸出時間：'+ts+'\n';
+  txt+='完成度：'+dn+'/'+tot+'（'+Math.round(dn/tot*100)+'%）\n';
+  txt+='━━━━━━━━━━━━━━\n';
   BLDS.forEach(b=>{
     const bkeys=allKeys.filter(k=>k.startsWith(b.id+'|'));
     const dn2=bkeys.filter(k=>chk[k]).length;
-    txt+='
-【'+b.name+'】 '+dn2+'/'+bkeys.length+'
-';
+    txt+='\n【'+b.name+'】 '+dn2+'/'+bkeys.length+'\n';
     b.cats.forEach((cg,ci)=>{
       const c=CATS[cg.cat];
       let catHdr=false;
       cg.items.forEach((it,ii)=>{
         const k=mkKey(b.id,ci,ii);
-        if(!catHdr){txt+='  ［'+c.name+'］
-';catHdr=true;}
-        txt+='  '+(chk[k]?'✓':'✗')+' '+it.label+'
-';
+        if(!catHdr){txt+='  ［'+c.name+'］\n';catHdr=true;}
+        txt+='  '+(chk[k]?'✓':'✗')+' '+it.label+'\n';
       });
     });
   });
-  txt+='━━━━━━━━━━━━━━
-';
+  txt+='━━━━━━━━━━━━━━\n';
   txt+='（由伊登花園消防複查系統產生）';
   if(navigator.clipboard){
     navigator.clipboard.writeText(txt).then(()=>{

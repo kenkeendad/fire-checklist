@@ -99,6 +99,28 @@ body{background:var(--c-bg3);color:var(--c-text);font-family:-apple-system,Blink
 
 .fab{position:fixed;bottom:20px;right:16px;background:var(--c-text);color:var(--c-bg);border:none;border-radius:50px;padding:12px 18px;font-size:13px;font-weight:600;cursor:pointer;z-index:200;display:flex;align-items:center;gap:6px;box-shadow:0 4px 16px rgba(0,0,0,.2);-webkit-tap-highlight-color:transparent}
 .fab:active{transform:scale(.96)}
+.fab2{position:fixed;bottom:20px;left:16px;background:#3B6D11;color:#fff;border:none;border-radius:50px;padding:12px 18px;font-size:13px;font-weight:600;cursor:pointer;z-index:200;box-shadow:0 4px 16px rgba(0,0,0,.2);-webkit-tap-highlight-color:transparent}
+.fab2:active{transform:scale(.96)}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:300;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px 12px}
+.modal-bg.show{display:block}
+.modal{background:var(--c-bg);border-radius:16px;max-width:680px;margin:0 auto;overflow:hidden}
+.modal-hd{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--c-border)}
+.modal-title{font-size:15px;font-weight:600;color:var(--c-text)}
+.modal-close{font-size:22px;color:var(--c-text2);background:none;border:none;cursor:pointer;line-height:1;padding:0 2px}
+.modal-body{padding:14px 16px;max-height:60vh;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.report-meta{font-size:12px;color:var(--c-text2);margin-bottom:14px;line-height:2;background:var(--c-bg2);border-radius:8px;padding:8px 12px}
+.report-section{margin-bottom:16px}
+.report-sec-title{font-size:13px;font-weight:600;color:var(--c-text);margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid var(--c-border);display:flex;justify-content:space-between;align-items:center}
+.report-item{font-size:12px;color:var(--c-text);padding:4px 0;display:flex;gap:6px;line-height:1.5;border-bottom:0.5px solid var(--c-border)}
+.report-item:last-child{border-bottom:none}
+.ri-ok{color:#3B6D11;font-weight:700;flex-shrink:0}
+.ri-no{color:#A32D2D;font-weight:700;flex-shrink:0}
+.modal-footer{display:flex;gap:8px;padding:12px 16px;border-top:1px solid var(--c-border);flex-wrap:wrap}
+.mbtn{flex:1;padding:11px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;min-width:80px;-webkit-tap-highlight-color:transparent}
+.mbtn-copy{background:var(--c-text);color:var(--c-bg)}
+.mbtn-reset{background:var(--c-red-bg);color:var(--c-red)}
+.mbtn:active{transform:scale(.97)}
+.copy-ok{font-size:11px;color:#3B6D11;text-align:center;padding:4px 0;display:none}
 </style>
 </head>
 <body>
@@ -117,9 +139,120 @@ body{background:var(--c-bg3);color:var(--c-text);font-family:-apple-system,Blink
 <div class="content" id="content"></div>
 
 <button class="fab" onclick="scrollToTop()">▲ 回頂部</button>
+<button class="fab2" onclick="openReport()">📋 產生報告</button>
+
+<div class="modal-bg" id="modal-bg" onclick="bgClick(event)">
+  <div class="modal">
+    <div class="modal-hd">
+      <div class="modal-title">📋 巡查報告</div>
+      <button class="modal-close" onclick="closeReport()">✕</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+    <div class="copy-ok" id="copy-ok">✓ 已複製到剪貼簿</div>
+    <div class="modal-footer">
+      <button class="mbtn mbtn-copy" onclick="copyReport()">複製文字（貼到 LINE）</button>
+      <button class="mbtn mbtn-reset" onclick="confirmReset()">重置所有勾選</button>
+    </div>
+  </div>
+</div>
 
 <script>
 function scrollToTop(){window.scrollTo({top:0,behavior:'smooth'})}
+
+const STORAGE_KEY='fire_chk_v1';
+function saveChk(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(chk));}catch(e){}}
+function loadChk(){try{const d=localStorage.getItem(STORAGE_KEY);if(d)chk=JSON.parse(d);}catch(e){}}
+
+function openReport(){
+  const now=new Date();
+  const ts=now.getFullYear()+'/'+(now.getMonth()+1).toString().padStart(2,'0')+'/'+now.getDate().toString().padStart(2,'0')+' '+now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0');
+  const tot=allKeys.length,dn=Object.values(chk).filter(Boolean).length;
+  let html=`<div class="report-meta">巡查日期：115/04/14<br>輸出時間：${ts}<br>已複查：${dn} / ${tot} 項（${Math.round(dn/tot*100)}%）<br>地點：新北市汐止區福德一路56號</div>`;
+  BLDS.forEach((b,bi)=>{
+    const bkeys=allKeys.filter(k=>k.startsWith(b.id+'|'));
+    const done=bkeys.filter(k=>chk[k]);
+    const undone=bkeys.filter(k=>!chk[k]);
+    html+=`<div class="report-section"><div class="report-sec-title">${b.name} <span style="font-size:11px;font-weight:400;color:var(--c-text2)">${done.length}/${bkeys.length} 完成</span></div>`;
+    b.cats.forEach((cg,ci)=>{
+      const c=CATS[cg.cat];
+      cg.items.forEach((it,ii)=>{
+        const k=mkKey(b.id,ci,ii);
+        const ok=!!chk[k];
+        html+=`<div class="report-item"><span class="${ok?'ri-ok':'ri-no'}">${ok?'✓':'✗'}</span><span>${it.label}</span></div>`;
+      });
+    });
+    html+='</div>';
+  });
+  document.getElementById('modal-body').innerHTML=html;
+  document.getElementById('copy-ok').style.display='none';
+  document.getElementById('modal-bg').className='modal-bg show';
+}
+
+function closeReport(){document.getElementById('modal-bg').className='modal-bg';}
+function bgClick(e){if(e.target===document.getElementById('modal-bg'))closeReport();}
+
+function copyReport(){
+  const now=new Date();
+  const ts=now.getFullYear()+'/'+(now.getMonth()+1).toString().padStart(2,'0')+'/'+now.getDate().toString().padStart(2,'0')+' '+now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0');
+  const tot=allKeys.length,dn=Object.values(chk).filter(Boolean).length;
+  let txt='【伊登花園消防缺失複查報告】
+';
+  txt+='巡查日期：115/04/14
+';
+  txt+='輸出時間：'+ts+'
+';
+  txt+='完成度：'+dn+'/'+tot+'（'+Math.round(dn/tot*100)+'%）
+';
+  txt+='━━━━━━━━━━━━━━
+';
+  BLDS.forEach(b=>{
+    const bkeys=allKeys.filter(k=>k.startsWith(b.id+'|'));
+    const dn2=bkeys.filter(k=>chk[k]).length;
+    txt+='
+【'+b.name+'】 '+dn2+'/'+bkeys.length+'
+';
+    b.cats.forEach((cg,ci)=>{
+      const c=CATS[cg.cat];
+      let catHdr=false;
+      cg.items.forEach((it,ii)=>{
+        const k=mkKey(b.id,ci,ii);
+        if(!catHdr){txt+='  ［'+c.name+'］
+';catHdr=true;}
+        txt+='  '+(chk[k]?'✓':'✗')+' '+it.label+'
+';
+      });
+    });
+  });
+  txt+='━━━━━━━━━━━━━━
+';
+  txt+='（由伊登花園消防複查系統產生）';
+  if(navigator.clipboard){
+    navigator.clipboard.writeText(txt).then(()=>{
+      const el=document.getElementById('copy-ok');
+      el.style.display='block';
+      setTimeout(()=>{el.style.display='none';},2500);
+    });
+  } else {
+    const ta=document.createElement('textarea');
+    ta.value=txt;ta.style.position='fixed';ta.style.opacity='0';
+    document.body.appendChild(ta);ta.focus();ta.select();
+    document.execCommand('copy');document.body.removeChild(ta);
+    const el=document.getElementById('copy-ok');
+    el.style.display='block';
+    setTimeout(()=>{el.style.display='none';},2500);
+  }
+}
+
+function confirmReset(){
+  if(confirm('確定要重置所有勾選嗎？此操作無法復原。')){
+    chk={};
+    saveChk();
+    document.querySelectorAll('.cell').forEach(c=>c.className='cell');
+    document.querySelectorAll('input[type=checkbox]').forEach(cb=>cb.checked=false);
+    updStats();
+    closeReport();
+  }
+}
 
 const CATS={
   illum:{ico:'💡',bg:'var(--c-teal-bg)',name:'照明燈',law:'斷電後緊急電源≥30分鐘'},
@@ -341,12 +474,14 @@ function render(){
       chk[k]=e.target.checked;
       const cell=document.getElementById('cell-'+k);
       if(cell)cell.className='cell'+(e.target.checked?' done':'');
+      saveChk();
       updStats();
     }
   });
   updStats();
 }
 
+loadChk();
 render();
 </script>
 </body>

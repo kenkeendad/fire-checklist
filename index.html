@@ -145,8 +145,8 @@ const B_ALL=['13F↑12F↓','12F↑11F↓','11F↑10F↓','10F↑9F↓','9F↑8F
 const B_DEF=['13F↑12F↓','12F↑11F↓','11F↑10F↓','10F↑9F↓','9F↑8F↓','7F↑6F↓','6F↑5F↓','5F↑4F↓','4F↑3F↓','3F↑2F↓'];
 const C_ALL=['RF↑14F↓','14F↑13F↓','13F↑12F↓','12F↑11F↓','11F↑10F↓','10F↑9F↓','9F↑8F↓','8F↑7F↓','7F↑6F↓','6F↑5F↓','5F↑4F↓','4F↑3F↓','3F↑2F↓','2F↑1MF↓','1MF↑1F↓','1F↑B1F↓'];
 const C_DEF=['RF↑14F↓','14F↑13F↓','13F↑12F↓','11F↑10F↓','10F↑9F↓','9F↑8F↓','7F↑6F↓','5F↑4F↓','3F↑2F↓','2F↑1MF↓','1MF↑1F↓'];
-const P_ALL=['14F↑13F↓','13F↑12F↓','12F↑11F↓','11F↑10F↓','10F↑9F↓','9F↑8F↓','8F↑7F↓','7F↑6F↓','6F↑5F↓','5F↑4F↓','4F↑3F↓','3F↑2F↓','2F↑1MF↓','1MF↑1F↓','1F↑B1F↓'];
-const P_DEF=['14F↑13F↓','13F↑12F↓','11F↑10F↓','9F↑8F↓','8F↑7F↓','4F↑3F↓','3F↑2F↓','2F↑1MF↓','1MF↑1F↓'];
+const D_ALL=['14F↑13F↓','13F↑12F↓','12F↑11F↓','11F↑10F↓','10F↑9F↓','9F↑8F↓','8F↑7F↓','7F↑6F↓','6F↑5F↓','5F↑4F↓','4F↑3F↓','3F↑2F↓','2F↑1MF↓','1MF↑1F↓','1F↑B1F↓'];
+const D_DEF=['14F↑13F↓','13F↑12F↓','11F↑10F↓','9F↑8F↓','8F↑7F↓','4F↑3F↓','3F↑2F↓','2F↑1MF↓','1MF↑1F↓'];
 const E_ALL=['13F↑12F↓','12F↑11F↓','11F↑10F↓','10F↑9F↓','9F↑8F↓','8F↑7F↓','7F↑6F↓','6F↑5F↓','5F↑4F↓','4F↑3F↓','3F↑2F↓','2F↑1MF↓','1MF↑1F↓','1F↑B1F↓'];
 const E_DEF=['13F↑12F↓','7F↑6F↓','5F↑4F↓'];
 const G_ALL=['RF↑13F↓','13F↑12F↓','12F↑11F↓','11F↑10F↓','10F↑9F↓','9F↑8F↓','8F↑7F↓','7F↑6F↓','6F↑5F↓','5F↑4F↓','4F↑3F↓','3F↑2F↓','2F↑1MF↓','1MF↑1F↓','1F↑B1F↓'];
@@ -175,6 +175,7 @@ const BLDS=[
     {cat:'alarm',items:[fd('13F 手報機'),fd('10F 手報機'),fd('9F 手報機'),fd('8F 手報機'),fd('5F 手報機'),fd('2F 手報機'),fd('1F 手報機'),fd('B1F 手報機')]},
     {cat:'exit',items:[fd('RF 出口燈')]},
     {cat:'illum',items:[fd('14F 照明燈')]},
+    {cat:'stair',items:si(D_ALL,D_DEF)},
   ]},
   {id:'E',name:'E棟',cats:[
     {cat:'exit',items:[fd('RF 出口燈')]},
@@ -191,9 +192,6 @@ const BLDS=[
     {cat:'esc',items:[fd('10F 避難器具燈'),fd('4F 避難器具燈')]},
     {cat:'illum',items:[fd('B1F 照明燈（缺件）'),fd('4F 照明燈'),fd('6F 照明燈（梯間）'),fd('7F 照明燈（梯間）')]},
     {cat:'stair',items:si(G_ALL,G_DEF)},
-  ]},
-  {id:'P',name:'P棟',cats:[
-    {cat:'stair',items:si(P_ALL,P_DEF)},
   ]},
   {id:'B1B2',name:'地下室（B1F／B2F）',cats:[
     {cat:'illum',items:[fd('B1F 195機車位 照明燈'),fd('B1F 114旁 照明燈')]},

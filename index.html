@@ -453,6 +453,14 @@ function render(){
     });
   });
  
+  // restore saved state
+  loadChk();
+  allKeys.forEach(k=>{
+    const cb=document.querySelector('input[data-key="'+k+'"]');
+    const cell=document.getElementById('cell-'+k);
+    if(cb&&chk[k]){cb.checked=true;if(cell)cell.className='cell done';}
+  });
+ 
   // appendix
   const appCard=document.createElement('div');appCard.className='app-card';
   appCard.innerHTML=`<div class="app-title">附錄：法源依據對照表<div class="app-sub">各類消防設備對應法規條文與白話說明</div></div>`;
@@ -481,8 +489,8 @@ function render(){
   updStats();
 }
  
-loadChk();
 render();
 </script>
 </body>
 </html>
+ 

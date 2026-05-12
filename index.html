@@ -91,7 +91,7 @@ body{background:var(--c-bg3);color:var(--c-text);font-family:-apple-system,Blink
 .sev-h{display:inline-block;font-size:10px;background:var(--c-red-bg);color:var(--c-red);border-radius:3px;padding:0 4px;margin-left:2px}
 
 /* Status badge — tap target */
-.st{min-width:22px;height:22px;border-radius:5px;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:0;user-select:none;border:none;background:none;cursor:pointer}
+.st{min-width:22px;height:auto;padding:3px 6px;border-radius:5px;font-size:11px;font-weight:700;display:inline-flex;align-items:center;white-space:nowrap;flex-shrink:0;user-select:none;line-height:1.3}
 .st-pending{background:var(--c-bg3);color:var(--c-text3)}
 .st-ok     {background:var(--c-grn-bg);color:var(--c-grn)}
 .st-recheck{background:var(--c-amber-bg);color:var(--c-amber)}
@@ -254,7 +254,7 @@ function loadExt(){ try{const d=localStorage.getItem(EXT_KEY);if(d)ext=JSON.pars
 
 // ── Status cycle ──────────────────────────────────────────────────────────────
 const STATUS_CYCLE = ['','ok','recheck','repair','done'];
-const STATUS_MARK  = {'':'○','ok':'✓','recheck':'!','repair':'✕','done':'★'};
+const STATUS_MARK  = {'':'○','ok':'✓ 正常','recheck':'! 待複查','repair':'✕ 需修繕','done':'★ 完修'};
 const STATUS_CLS   = {'':'st-pending','ok':'st-ok','recheck':'st-recheck','repair':'st-repair','done':'st-done'};
 const STATUS_LABEL = {'':'待確認','ok':'正常','recheck':'待複查','repair':'確認需修繕','done':'已完修'};
 
@@ -637,9 +637,9 @@ function openReport(){
     if(extFloors.length>0){
       const issues=extFloors.filter(fl=>{const d=ext[mkExtKey(b.id,fl)];return d&&d.exp&&!d.pressure;});
       const done=extFloors.filter(fl=>{const d=ext[mkExtKey(b.id,fl)];return d&&d.exp&&d.pressure;});
-      if(issues.length>0||done.length>0){
-        html+=`<div class="report-item"><span class="ri-repair">[🧯滅火器]</span><span>查核：${done.length}完成 / ${issues.length>0?'壓力異常：'+issues.join('、'):'無異常'}</span></div>`;
-      }
+      const pending=extFloors.filter(fl=>{const d=ext[mkExtKey(b.id,fl)];return !d||!d.exp;});
+      const issueLabel=issues.length>0?'　⚠️壓力異常：'+issues.map(fl=>`${b.name}${fl}`).join('、'):'';
+      html+=`<div class="report-item"><span class="ri-repair">[🧯滅火器 ${extFloors.length}層]</span><span>✓完成：${done.length}　異常：${issues.length}　待查：${pending.length}${issueLabel}</span></div>`;
     }
     html+='</div>';
   });
@@ -717,9 +717,12 @@ function copyReport(){
     });
     const extFloors=EXT_FLOORS[b.id]||[];
     if(extFloors.length>0){
-      txt+='  🧯 滅火器：';
       const issues=extFloors.filter(fl=>{const d=ext[mkExtKey(b.id,fl)];return d&&d.exp&&!d.pressure;});
-      txt+=(issues.length?'壓力異常 '+issues.join(' '):'查核中')+'\n';
+      const done=extFloors.filter(fl=>{const d=ext[mkExtKey(b.id,fl)];return d&&d.exp&&d.pressure;});
+      const pending=extFloors.filter(fl=>{const d=ext[mkExtKey(b.id,fl)];return !d||!d.exp;});
+      txt+='  🧯 滅火器（'+extFloors.length+'層）：完成'+done.length+' / 異常'+issues.length+' / 待查'+pending.length;
+      if(issues.length>0) txt+='　壓力異常：'+issues.join(' ');
+      txt+='\n';
     }
   });
   txt+='━━━━━━━━━━━━━━\n（由伊登花園消防複查系統產生）';

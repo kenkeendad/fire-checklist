@@ -1162,6 +1162,65 @@ function printReportToPDF(){
     html+=`</tbody></table></div>`;
   });
 
+  // ── 修繕項目總類清單 ──────────────────────────────────────────────────
+  // Collect all repair/recheck items grouped by category
+  const summaryMap = {}; // catKey → [{bldName, label, lv, status}]
+  BLDS.forEach(b=>{
+    b.cats.forEach((cg,ci)=>{
+      cg.items.forEach((it,ii)=>{
+        const k=mkKey(b.id,ci,ii);
+        const s=chk[k]||'';
+        if(s!=='repair'&&s!=='recheck')return;
+        if(reportHidden.has(k))return;
+        if(!summaryMap[cg.cat]) summaryMap[cg.cat]=[];
+        const lv=luxData[k];
+        const spec=LUX_SPEC[cg.cat];
+        let luxNote='';
+        if(spec&&lv!==undefined){
+          luxNote = spec.unit==='cd'
+            ? `${lv.toFixed(1)} cd ${lv>=spec.min?'✓':'✗'}`
+            : `${lv.toFixed(1)} lux ${lv>=spec.min?'✓':'✗'}`;
+        }
+        summaryMap[cg.cat].push({bld:b.name, label:it.label, luxNote, status:s});
+      });
+    });
+  });
+
+  const catKeys=Object.keys(summaryMap);
+  if(catKeys.length>0){
+    const totalRepair=catKeys.reduce((sum,k)=>sum+summaryMap[k].filter(x=>x.status==='repair').length,0);
+    const totalRecheck=catKeys.reduce((sum,k)=>sum+summaryMap[k].filter(x=>x.status==='recheck').length,0);
+    html+=`<div class="print-bld-section">
+      <div class="print-bld-title" style="background:#c0392b;color:#fff">📋 修繕項目總類清單　共 ${totalRepair} 項需修繕${totalRecheck>0?'　'+totalRecheck+' 項待複查':''}</div>`;
+    catKeys.forEach(catKey=>{
+      const c=CATS[catKey];
+      const items=summaryMap[catKey];
+      const repairCount=items.filter(x=>x.status==='repair').length;
+      const recheckCount=items.filter(x=>x.status==='recheck').length;
+      html+=`<table class="print-table" style="margin-bottom:0">
+        <thead><tr style="background:#fce8e6">
+          <th colspan="4" style="text-align:left;padding:6px 8px">
+            ${c.ico} ${c.name}　
+            <span style="font-size:11px;color:#555">${c.law}</span>　
+            <b style="color:#c0392b">${repairCount} 項需修繕${recheckCount>0?' / '+recheckCount+' 項待複查':''}</b>
+          </th>
+        </tr>
+        <tr><th width="15%">棟別</th><th width="35%">位置 / 項目</th><th width="25%">量測值</th><th width="25%">狀態</th></tr></thead>
+        <tbody>`;
+      items.forEach(x=>{
+        const repCls=x.status==='repair'?'print-status-repair':'print-status-recheck';
+        html+=`<tr>
+          <td>${x.bld}</td>
+          <td>${x.label}</td>
+          <td style="text-align:center;font-size:11px">${x.luxNote||'—'}</td>
+          <td class="${repCls}">${STATUS_LABEL[x.status]}</td>
+        </tr>`;
+      });
+      html+=`</tbody></table><div style="height:8px"></div>`;
+    });
+    html+=`</div>`;
+  }
+
   html+=`<div><div class="print-header" style="margin-bottom:20px"><h2>附錄：法源依據與檢修標準</h2></div>`;
   LAWS.forEach(law=>{
     html+=`<div class="print-appendix-item"><h3 style="margin:0 0 6px 0;font-size:14px">${law.ico} ${law.name}</h3><p style="margin:0 0 6px 0;font-size:12px;line-height:1.5"><strong>法規依據：</strong>${law.ref}</p><p style="margin:0;font-size:12px;line-height:1.5"><strong>修繕標準：</strong>${law.plain}</p></div>`;

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
-<title>伊登花園消防缺失複查表 - 法規修正版</title>
+<title>伊登花園消防缺失複查表</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -37,17 +37,24 @@
 html{font-size:16px;-webkit-text-size-adjust:100%}
 body{background:var(--c-bg3);color:var(--c-text);font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans GB','PingFang TC',sans-serif;padding:0;min-height:100vh}
 
+/* ── Top bar ── */
 .top-bar{background:var(--c-bg);border-bottom:1px solid var(--c-border);padding:12px 16px;position:sticky;top:0;z-index:100}
 .top-title{font-size:15px;font-weight:600;color:var(--c-text)}
 .top-sub{font-size:11px;color:var(--c-text2);margin-top:2px}
-.top-stats{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
-.stat{background:var(--c-bg2);border-radius:8px;padding:6px 12px;text-align:center;flex:1;min-width:70px}
-.sn{font-size:18px;font-weight:600;color:var(--c-text)}.sn.r{color:var(--c-red)}.sn.g{color:var(--c-grn)}
-.sl{font-size:10px;color:var(--c-text2);margin-top:1px}
+.top-stats{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
+.stat{background:var(--c-bg2);border-radius:8px;padding:5px 8px;text-align:center;flex:1;min-width:58px}
+.sn{font-size:17px;font-weight:700;color:var(--c-text)}
+.sn.red{color:var(--c-red)}.sn.amber{color:var(--c-amber)}.sn.grn{color:var(--c-grn)}.sn.blue{color:var(--c-blue)}
+.sl{font-size:9px;color:var(--c-text2);margin-top:1px;white-space:nowrap}
 .pb-global{height:4px;background:var(--c-border);margin-top:10px;border-radius:2px;overflow:hidden}
 .pb-global-fill{height:100%;background:var(--c-grn);transition:width .3s;border-radius:2px}
 
-.content{padding:12px 12px 80px}
+/* ── Status legend strip ── */
+.legend-status{display:flex;gap:10px;padding:5px 14px;font-size:10px;color:var(--c-text2);flex-wrap:wrap;border-bottom:1px solid var(--c-border);background:var(--c-bg2)}
+.leg-s{display:flex;align-items:center;gap:3px}
+
+/* ── Layout ── */
+.content{padding:12px 12px 90px}
 .bld-card{background:var(--c-bg);border-radius:12px;margin-bottom:12px;overflow:hidden;border:1px solid var(--c-border)}
 .bld-hd{display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent}
 .bld-hd:active{background:var(--c-bg2)}
@@ -55,11 +62,13 @@ body{background:var(--c-bg3);color:var(--c-text);font-family:-apple-system,Blink
 .bdg{font-size:11px;padding:3px 8px;border-radius:5px;white-space:nowrap;font-weight:500}
 .bdg-r{background:var(--c-red-bg);color:var(--c-red)}
 .bdg-g{background:var(--c-grn-bg);color:var(--c-grn)}
+.bdg-amber{background:var(--c-amber-bg);color:var(--c-amber)}
 .tog{font-size:12px;color:var(--c-text3);transition:transform .2s;width:20px;text-align:center}
 .tog.op{transform:rotate(180deg)}
 .pbr{height:3px;background:var(--c-border)}
 .pbf{height:100%;background:var(--c-grn);transition:width .3s}
 
+/* ── Category header ── */
 .cat-hd{display:flex;align-items:center;gap:8px;padding:8px 14px;border-top:1px solid var(--c-border);border-bottom:1px solid var(--c-border)}
 .cat-ico{width:22px;height:22px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0}
 .cat-name{font-size:12px;font-weight:600;color:var(--c-text2);flex:1}
@@ -68,21 +77,54 @@ body{background:var(--c-bg3);color:var(--c-text);font-family:-apple-system,Blink
 .legend{display:flex;gap:16px;padding:6px 14px;font-size:11px;color:var(--c-text2);border-bottom:1px solid var(--c-border);flex-wrap:wrap}
 .leg-i{display:flex;align-items:center;gap:5px}
 
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr))}
-@media(max-width:400px){.grid{grid-template-columns:repeat(auto-fill,minmax(85px,1fr))}}
-@media(min-width:600px){.grid{grid-template-columns:repeat(auto-fill,minmax(120px,1fr))}}
-@media(min-width:900px){.grid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr))}}
+/* ── Item grid ── */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr))}
+@media(max-width:400px){.grid{grid-template-columns:repeat(auto-fill,minmax(95px,1fr))}}
+@media(min-width:600px){.grid{grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}}
+@media(min-width:900px){.grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}}
 
-.cell{padding:10px 8px;border-right:1px solid var(--c-border);border-bottom:1px solid var(--c-border);display:flex;align-items:flex-start;gap:5px;background:var(--c-bg);cursor:pointer;min-height:44px;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
-.cell:active{background:var(--c-bg2)}
-.cell.done{background:var(--c-bg2)}
-.cell input[type=checkbox]{width:18px;height:18px;flex-shrink:0;margin-top:1px;accent-color:var(--c-grn);cursor:pointer;touch-action:manipulation}
-.cell-txt{font-size:12px;color:var(--c-text);line-height:1.4}
-.cell.done .cell-txt{text-decoration:line-through;color:var(--c-text3)}
-.dm{font-size:14px;font-weight:700;color:var(--c-orange);flex-shrink:0;line-height:1.3}
+/* ── Cell & Status system ── */
+.cell{padding:8px 8px;border-right:1px solid var(--c-border);border-bottom:1px solid var(--c-border);display:flex;align-items:flex-start;gap:6px;cursor:pointer;min-height:44px;-webkit-tap-highlight-color:transparent;touch-action:manipulation;transition:background .15s;position:relative;border-left:3px solid transparent}
+.cell:active{filter:brightness(.95)}
+.cell-txt{font-size:12px;color:var(--c-text);line-height:1.4;flex:1}
+.dm{font-size:13px;font-weight:700;color:var(--c-orange);flex-shrink:0;line-height:1.5}
 .sev-h{display:inline-block;font-size:10px;background:var(--c-red-bg);color:var(--c-red);border-radius:3px;padding:0 4px;margin-left:2px}
 
-/* appendix */
+/* Status badge — tap target */
+.st{min-width:22px;height:22px;border-radius:5px;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:0;user-select:none;border:none;background:none;cursor:pointer}
+.st-pending{background:var(--c-bg3);color:var(--c-text3)}
+.st-ok     {background:var(--c-grn-bg);color:var(--c-grn)}
+.st-recheck{background:var(--c-amber-bg);color:var(--c-amber)}
+.st-repair {background:var(--c-red-bg);color:var(--c-red)}
+.st-done   {background:var(--c-blue-bg);color:var(--c-blue)}
+
+/* Cell background by status */
+.cell[data-status="ok"]     {background:var(--c-grn-bg);border-left-color:var(--c-grn)}
+.cell[data-status="recheck"]{background:var(--c-amber-bg);border-left-color:var(--c-amber)}
+.cell[data-status="repair"] {background:var(--c-red-bg);border-left-color:var(--c-red)}
+.cell[data-status="done"]   {background:var(--c-blue-bg);border-left-color:var(--c-blue)}
+.cell[data-status="ok"] .cell-txt,
+.cell[data-status="done"] .cell-txt{text-decoration:line-through;color:var(--c-text3)}
+
+/* ── Extinguisher section ── */
+.ext-hd{display:flex;align-items:center;gap:8px;padding:9px 14px;border-top:2px solid var(--c-border);background:var(--c-red-bg);cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent}
+.ext-hd:active{filter:brightness(.95)}
+.ext-hd-title{font-size:12px;font-weight:700;color:var(--c-red);flex:1}
+.ext-hd-stat{font-size:11px;color:var(--c-red)}
+.ext-row{display:flex;align-items:center;gap:8px;padding:7px 14px;border-bottom:1px solid var(--c-border);background:var(--c-bg);min-height:40px}
+.ext-row.ext-ok {background:var(--c-grn-bg)}
+.ext-row.ext-bad{background:var(--c-red-bg)}
+.ext-fl{font-size:12px;font-weight:600;color:var(--c-text);min-width:40px}
+.ext-exp{font-size:12px;border:1px solid var(--c-border2);border-radius:5px;padding:4px 7px;width:75px;background:var(--c-bg);color:var(--c-text);-webkit-appearance:none;outline:none}
+.ext-exp:focus{border-color:var(--c-blue)}
+.ext-pr{display:flex;align-items:center;gap:4px;font-size:12px;color:var(--c-text);cursor:pointer;flex:1}
+.ext-pr input[type=checkbox]{accent-color:var(--c-grn);width:16px;height:16px;cursor:pointer;flex-shrink:0}
+.ext-pill{font-size:10px;padding:2px 7px;border-radius:10px;white-space:nowrap;font-weight:600;margin-left:auto}
+.ext-pill-ok  {background:var(--c-grn-bg);color:var(--c-grn)}
+.ext-pill-bad {background:var(--c-red-bg);color:var(--c-red)}
+.ext-pill-pend{background:var(--c-bg3);color:var(--c-text3)}
+
+/* ── Appendix ── */
 .app-card{background:var(--c-bg);border-radius:12px;margin-bottom:12px;overflow:hidden;border:1px solid var(--c-border)}
 .app-title{font-size:15px;font-weight:600;color:var(--c-text);padding:12px 14px;border-bottom:1px solid var(--c-border)}
 .app-sub{font-size:11px;color:var(--c-text2);font-weight:400;margin-top:2px}
@@ -97,10 +139,13 @@ body{background:var(--c-bg3);color:var(--c-text);font-family:-apple-system,Blink
 .law-plain{font-size:12px;color:var(--c-text);background:var(--c-bg2);border-radius:6px;padding:7px 10px;line-height:1.6;border-left:3px solid var(--c-grn)}
 .law-plain-label{font-size:10px;color:var(--c-grn);font-weight:600;margin-bottom:3px}
 
+/* ── FABs ── */
 .fab{position:fixed;bottom:20px;right:16px;background:var(--c-text);color:var(--c-bg);border:none;border-radius:50px;padding:12px 18px;font-size:13px;font-weight:600;cursor:pointer;z-index:200;display:flex;align-items:center;gap:6px;box-shadow:0 4px 16px rgba(0,0,0,.2);-webkit-tap-highlight-color:transparent}
 .fab:active{transform:scale(.96)}
 .fab2{position:fixed;bottom:20px;left:16px;background:#3B6D11;color:#fff;border:none;border-radius:50px;padding:12px 18px;font-size:13px;font-weight:600;cursor:pointer;z-index:200;box-shadow:0 4px 16px rgba(0,0,0,.2);-webkit-tap-highlight-color:transparent}
 .fab2:active{transform:scale(.96)}
+
+/* ── Modal ── */
 .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:300;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px 12px}
 .modal-bg.show{display:block}
 .modal{background:var(--c-bg);border-radius:16px;max-width:680px;margin:0 auto;overflow:hidden}
@@ -111,11 +156,13 @@ body{background:var(--c-bg3);color:var(--c-text);font-family:-apple-system,Blink
 .report-meta{font-size:12px;color:var(--c-text2);margin-bottom:14px;line-height:2;background:var(--c-bg2);border-radius:8px;padding:8px 12px}
 .report-section{margin-bottom:16px}
 .report-sec-title{font-size:13px;font-weight:600;color:var(--c-text);margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid var(--c-border);display:flex;justify-content:space-between;align-items:center}
-.report-item{font-size:12px;color:var(--c-text);padding:4px 0;display:flex;gap:6px;line-height:1.5;border-bottom:0.5px solid var(--c-border)}
+.report-item{font-size:12px;color:var(--c-text);padding:4px 0;display:flex;gap:6px;line-height:1.5;border-bottom:.5px solid var(--c-border)}
 .report-item:last-child{border-bottom:none}
-.ri-ok{color:#A32D2D;font-weight:700;flex-shrink:0}
-.ri-no{color:#999999;font-weight:700;flex-shrink:0}
-
+.ri-ok{color:var(--c-red);font-weight:700;flex-shrink:0}
+.ri-recheck{color:var(--c-amber);font-weight:700;flex-shrink:0}
+.ri-repair{color:var(--c-red);font-weight:700;flex-shrink:0}
+.ri-done{color:var(--c-blue);font-weight:700;flex-shrink:0}
+.ri-no{color:var(--c-text3);font-weight:700;flex-shrink:0}
 .modal-footer{display:flex;gap:8px;padding:12px 16px;border-top:1px solid var(--c-border);flex-wrap:wrap}
 .mbtn{flex:1;padding:11px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;min-width:80px;-webkit-tap-highlight-color:transparent}
 .mbtn-print{background:var(--c-blue);color:#fff}
@@ -124,29 +171,28 @@ body{background:var(--c-bg3);color:var(--c-text);font-family:-apple-system,Blink
 .mbtn:active{transform:scale(.97)}
 .copy-ok{font-size:11px;color:#3B6D11;text-align:center;padding:4px 0;display:none}
 
-/* --- 列印與 PDF 輸出專用樣式 --- */
-#print-area { display: none; }
-@media print {
-  body > :not(#print-area) { display: none !important; }
-  body { background: #fff; padding: 0; margin: 0; min-height: auto; }
-  #print-area { display: block !important; width: 100%; font-family: 'PingFang TC', '微軟正黑體', sans-serif; background: #fff; color: #000; }
-  
-  .print-header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #000; padding-bottom: 15px; }
-  .print-header h1 { font-size: 24px; margin: 0 0 12px 0; }
-  .print-meta { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 8px; }
-  
-  .print-bld-section { page-break-after: always; break-after: page; padding-bottom: 15px; }
-  .print-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 13px; }
-  .print-table tr { page-break-inside: avoid; break-inside: avoid; }
-  .print-table th, .print-table td { border: 1px solid #000; padding: 8px 10px; text-align: left; }
-  .print-table th { background-color: #e5e5e5 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  .print-bld-title { font-size: 16px; font-weight: bold; margin: 0; background: #d4e3f0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; padding: 8px 10px; border: 1px solid #000; border-bottom: none; page-break-after: avoid; break-after: avoid; }
-  
-  .print-ok { color: #A32D2D !important; font-weight: bold; } 
-  .print-no { color: #666666 !important; } 
-  
-  .print-appendix-item { border: 1px solid #000; padding: 12px; margin-bottom: 12px; border-radius: 6px; page-break-inside: avoid; }
-  @page { size: A4; margin: 15mm; }
+/* ── Print ── */
+#print-area{display:none}
+@media print{
+  body>:not(#print-area){display:none!important}
+  body{background:#fff;padding:0;margin:0;min-height:auto}
+  #print-area{display:block!important;width:100%;font-family:'PingFang TC','微軟正黑體',sans-serif;background:#fff;color:#000}
+  .print-header{text-align:center;margin-bottom:20px;border-bottom:2px solid #000;padding-bottom:15px}
+  .print-header h1{font-size:22px;margin:0 0 12px 0}
+  .print-meta{display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px}
+  .print-bld-section{page-break-after:always;break-after:page;padding-bottom:15px}
+  .print-table{width:100%;border-collapse:collapse;margin-bottom:10px;font-size:12px}
+  .print-table tr{page-break-inside:avoid;break-inside:avoid}
+  .print-table th,.print-table td{border:1px solid #000;padding:6px 8px;text-align:left}
+  .print-table th{background-color:#e5e5e5!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .print-bld-title{font-size:15px;font-weight:bold;margin:0;background:#d4e3f0!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;padding:7px 10px;border:1px solid #000;border-bottom:none;page-break-after:avoid;break-after:avoid}
+  .print-status-ok{color:#3B6D11!important;font-weight:bold}
+  .print-status-recheck{color:#854F0B!important;font-weight:bold}
+  .print-status-repair{color:#A32D2D!important;font-weight:bold}
+  .print-status-done{color:#185FA5!important;font-weight:bold}
+  .print-status-pending{color:#999!important}
+  .print-appendix-item{border:1px solid #000;padding:12px;margin-bottom:12px;border-radius:4px;page-break-inside:avoid}
+  @page{size:A4;margin:15mm}
 }
 </style>
 </head>
@@ -156,15 +202,26 @@ body{background:var(--c-bg3);color:var(--c-text);font-family:-apple-system,Blink
   <div class="top-title">伊登花園消防缺失複查表</div>
   <div class="top-sub">115/04/14 · 新北市汐止區福德一路56號 · 上羿機電 劉稼宏 0981-981-933</div>
   <div class="top-stats">
-    <div class="stat"><div class="sn r" id="s-tot">0</div><div class="sl">缺失總數</div></div>
-    <div class="stat"><div class="sn g" id="s-dn">0</div><div class="sl">已複查</div></div>
-    <div class="stat"><div class="sn" id="s-pct">0%</div><div class="sl">進度</div></div>
+    <div class="stat"><div class="sn red" id="s-repair">0</div><div class="sl">確認需修繕</div></div>
+    <div class="stat"><div class="sn amber" id="s-recheck">0</div><div class="sl">待複查</div></div>
+    <div class="stat"><div class="sn blue" id="s-done">0</div><div class="sl">已完修</div></div>
+    <div class="stat"><div class="sn grn" id="s-ok">0</div><div class="sl">正常</div></div>
+    <div class="stat"><div class="sn" id="s-pct">0%</div><div class="sl">確認進度</div></div>
   </div>
   <div class="pb-global"><div class="pb-global-fill" id="pb-global" style="width:0%"></div></div>
 </div>
 
-<div class="content" id="content"></div>
+<!-- Status legend -->
+<div class="legend-status">
+  <span>點選格子切換狀態：</span>
+  <span class="leg-s"><b style="background:var(--c-bg3);color:var(--c-text3);border-radius:3px;padding:1px 5px;font-size:10px">○</b>待確認</span>
+  <span class="leg-s"><b style="background:var(--c-grn-bg);color:var(--c-grn);border-radius:3px;padding:1px 5px;font-size:10px">✓</b>正常</span>
+  <span class="leg-s"><b style="background:var(--c-amber-bg);color:var(--c-amber);border-radius:3px;padding:1px 5px;font-size:10px">!</b>待複查</span>
+  <span class="leg-s"><b style="background:var(--c-red-bg);color:var(--c-red);border-radius:3px;padding:1px 5px;font-size:10px">✕</b>需修繕</span>
+  <span class="leg-s"><b style="background:var(--c-blue-bg);color:var(--c-blue);border-radius:3px;padding:1px 5px;font-size:10px">★</b>已完修</span>
+</div>
 
+<div class="content" id="content"></div>
 <div id="print-area"></div>
 
 <button class="fab" onclick="scrollToTop()">▲ 回頂部</button>
@@ -187,177 +244,66 @@ body{background:var(--c-bg3);color:var(--c-text);font-family:-apple-system,Blink
 </div>
 
 <script>
-function scrollToTop(){window.scrollTo({top:0,behavior:'smooth'})}
+// ── Storage ──────────────────────────────────────────────────────────────────
+const STORAGE_KEY = 'fire_chk_v2';
+const EXT_KEY     = 'fire_ext_v1';
+function saveChk(){ try{localStorage.setItem(STORAGE_KEY,JSON.stringify(chk))}catch(e){} }
+function loadChk(){ try{const d=localStorage.getItem(STORAGE_KEY);if(d)chk=JSON.parse(d)}catch(e){} }
+function saveExt(){ try{localStorage.setItem(EXT_KEY,JSON.stringify(ext))}catch(e){} }
+function loadExt(){ try{const d=localStorage.getItem(EXT_KEY);if(d)ext=JSON.parse(d)}catch(e){} }
 
-const STORAGE_KEY='fire_chk_v1';
-function saveChk(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(chk));}catch(e){}}
-function loadChk(){try{const d=localStorage.getItem(STORAGE_KEY);if(d)chk=JSON.parse(d);}catch(e){}}
+// ── Status cycle ──────────────────────────────────────────────────────────────
+const STATUS_CYCLE = ['','ok','recheck','repair','done'];
+const STATUS_MARK  = {'':'○','ok':'✓','recheck':'!','repair':'✕','done':'★'};
+const STATUS_CLS   = {'':'st-pending','ok':'st-ok','recheck':'st-recheck','repair':'st-repair','done':'st-done'};
+const STATUS_LABEL = {'':'待確認','ok':'正常','recheck':'待複查','repair':'確認需修繕','done':'已完修'};
 
-function openReport(){
-  const now=new Date();
-  const ts=now.getFullYear()+'/'+(now.getMonth()+1).toString().padStart(2,'0')+'/'+now.getDate().toString().padStart(2,'0')+' '+now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0');
-  const tot=allKeys.length,dn=Object.values(chk).filter(Boolean).length;
-  let html=`<div class="report-meta">巡查日期：115/04/14<br>輸出時間：${ts}<br>已複查進度：${dn} / ${tot} 項（${Math.round(dn/tot*100)}%）<br>地點：新北市汐止區福德一路56號</div>`;
-  BLDS.forEach((b,bi)=>{
-    const bkeys=allKeys.filter(k=>k.startsWith(b.id+'|'));
-    const done=bkeys.filter(k=>chk[k]);
-    const undone=bkeys.filter(k=>!chk[k]);
-    html+=`<div class="report-section"><div class="report-sec-title">${b.name} <span style="font-size:11px;font-weight:400;color:var(--c-text2)">${done.length}/${bkeys.length} 複查</span></div>`;
-    b.cats.forEach((cg,ci)=>{
-      const c=CATS[cg.cat];
-      cg.items.forEach((it,ii)=>{
-        const k=mkKey(b.id,ci,ii);
-        const ok=!!chk[k];
-        html+=`<div class="report-item"><span class="${ok?'ri-ok':'ri-no'}">${ok?'☑ 已複查須修繕':'☐ 待複查'}</span><span>${it.label}</span></div>`;
-      });
-    });
-    html+='</div>';
-  });
-  document.getElementById('modal-body').innerHTML=html;
-  document.getElementById('copy-ok').style.display='none';
-  document.getElementById('modal-bg').className='modal-bg show';
+function cycleStatus(key){
+  const cur = chk[key]||'';
+  const next = STATUS_CYCLE[(STATUS_CYCLE.indexOf(cur)+1)%STATUS_CYCLE.length];
+  chk[key] = next;
+  // Update badge
+  const badge = document.getElementById('st-'+key);
+  if(badge){ badge.textContent=STATUS_MARK[next]; badge.className='st '+STATUS_CLS[next]; }
+  // Update cell
+  const cell = document.getElementById('cell-'+key);
+  if(cell){ cell.dataset.status=next; }
+  saveChk();
+  updStats();
 }
 
-function closeReport(){document.getElementById('modal-bg').className='modal-bg';}
-function bgClick(e){if(e.target===document.getElementById('modal-bg'))closeReport();}
-
-function printReportToPDF() {
-  const now = new Date();
-  const ts = now.getFullYear() + '/' + (now.getMonth() + 1).toString().padStart(2, '0') + '/' + now.getDate().toString().padStart(2, '0') + ' ' + now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
-  const tot = allKeys.length, dn = Object.values(chk).filter(Boolean).length;
-
-  let html = `
-    <div class="print-header">
-      <h1>伊登花園 消防設備缺失複查報告書</h1>
-      <div class="print-meta"><span><strong>巡查日期：</strong>115/04/14</span><span><strong>列印/輸出時間：</strong>${ts}</span></div>
-      <div class="print-meta"><span><strong>社區地點：</strong>新北市汐止區福德一路56號</span><span><strong>檢修負責人：</strong>上羿機電 劉稼宏</span></div>
-      <div class="print-meta"><span><strong>整體複查進度：</strong>${dn} / ${tot} 項目（${Math.round(dn / tot * 100)}%）</span></div>
-    </div>
-  `;
-
-  BLDS.forEach(b => {
-    const bkeys = allKeys.filter(k => k.startsWith(b.id + '|'));
-    const dn2 = bkeys.filter(k => chk[k]).length;
-    if (bkeys.length === 0) return;
-
-    html += `<div class="print-bld-section">`;
-    html += `<div class="print-bld-title">${b.name} (已複查: ${dn2}/${bkeys.length})</div>`;
-    html += `<table class="print-table">
-      <thead><tr><th width="35%">設備與條件</th><th width="45%">檢查項目</th><th width="20%">複查狀態</th></tr></thead>
-      <tbody>`;
-
-    b.cats.forEach((cg, ci) => {
-      const c = CATS[cg.cat];
-      cg.items.forEach((it, ii) => {
-        const k = mkKey(b.id, ci, ii);
-        const ok = !!chk[k];
-        html += `<tr>
-          <td><strong>項目：</strong>${c.name}<br><span style="color:#555;font-size:12px;"><strong>條件：</strong>${c.law}</span></td>
-          <td>${it.label}</td>
-          <td class="${ok ? 'print-ok' : 'print-no'}">${ok ? '☑ 已複查須修繕' : '☐ 待複查'}</td>
-        </tr>`;
-      });
-    });
-    html += `</tbody></table></div>`;
-  });
-
-  html += `
-    <div style="padding-top: 10px;">
-      <div class="print-header" style="margin-bottom: 20px;">
-        <h2>附錄：法源依據與檢修標準</h2>
-      </div>
-  `;
-  
-  LAWS.forEach(law => {
-    html += `
-      <div class="print-appendix-item">
-        <h3 style="margin: 0 0 6px 0; font-size: 15px;">${law.name}</h3>
-        <p style="margin: 0 0 6px 0; font-size: 13px; line-height: 1.5;"><strong>法規依據：</strong>${law.ref}</p>
-        <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #222;"><strong>修繕原因標準：</strong>${law.plain}</p>
-      </div>
-    `;
-  });
-  html += `</div>`;
-
-  document.getElementById('print-area').innerHTML = html;
-  closeReport();
-  setTimeout(() => window.print(), 300);
-}
-
-function copyReport(){
-  const now=new Date();
-  const ts=now.getFullYear()+'/'+(now.getMonth()+1).toString().padStart(2,'0')+'/'+now.getDate().toString().padStart(2,'0')+' '+now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0');
-  const tot=allKeys.length,dn=Object.values(chk).filter(Boolean).length;
-  let txt='【伊登花園消防缺失複查報告】\n';
-  txt+='巡查日期：115/04/14\n';
-  txt+='輸出時間：'+ts+'\n';
-  txt+='複查進度：'+dn+'/'+tot+'（'+Math.round(dn/tot*100)+'%）\n';
-  txt+='━━━━━━━━━━━━━━\n';
-  BLDS.forEach(b=>{
-    const bkeys=allKeys.filter(k=>k.startsWith(b.id+'|'));
-    const dn2=bkeys.filter(k=>chk[k]).length;
-    txt+='\n【'+b.name+'】已複查: '+dn2+'/'+bkeys.length+'\n';
-    b.cats.forEach((cg,ci)=>{
-      const c=CATS[cg.cat];
-      let catHdr=false;
-      cg.items.forEach((it,ii)=>{
-        const k=mkKey(b.id,ci,ii);
-        if(!catHdr){
-          txt+='  ［項目：'+c.name+'，條件：'+c.law+'］\n';
-          catHdr=true;
-        }
-        txt+='  '+(chk[k]?'[☑ 已複查須修繕]':'[☐ 待複查]')+' '+it.label+'\n';
-      });
-    });
-  });
-  txt+='━━━━━━━━━━━━━━\n';
-  txt+='（由伊登花園消防複查系統產生）';
-  if(navigator.clipboard){
-    navigator.clipboard.writeText(txt).then(()=>{
-      const el=document.getElementById('copy-ok');
-      el.style.display='block';
-      setTimeout(()=>{el.style.display='none';},2500);
-    });
-  } else {
-    const ta=document.createElement('textarea');
-    ta.value=txt;ta.style.position='fixed';ta.style.opacity='0';
-    document.body.appendChild(ta);ta.focus();ta.select();
-    document.execCommand('copy');document.body.removeChild(ta);
-    const el=document.getElementById('copy-ok');
-    el.style.display='block';
-    setTimeout(()=>{el.style.display='none';},2500);
-  }
-}
-
-function confirmReset(){
-  if(confirm('確定要重置所有勾選嗎？此操作無法復原。')){
-    chk={};
-    saveChk();
-    document.querySelectorAll('.cell').forEach(c=>c.className='cell');
-    document.querySelectorAll('input[type=checkbox]').forEach(cb=>cb.checked=false);
-    updStats();
-    closeReport();
-  }
-}
-
-/* --- CATS 分類標籤修正 (法規標準補強) --- */
-const CATS={
-  illum:{ico:'💡',bg:'var(--c-teal-bg)',name:'照明燈',law:'斷電後電池≥30分鐘，照度≥2~10 lux'},
-  exit:{ico:'🚪',bg:'var(--c-grn-bg)',name:'出口燈',law:'斷電後電池≥20或60分鐘，光度≥20 cd'},
-  sign:{ico:'🔆',bg:'var(--c-grn-bg)',name:'標示燈',law:'斷電後電池≥20或60分鐘，光度≥25 cd'},
-  esc:{ico:'🪜',bg:'var(--c-purple-bg)',name:'避難器具燈',law:'斷電後電池≥20或60分鐘'},
-  stair:{ico:'🔢',bg:'var(--c-purple-bg)',name:'樓梯間樓層燈',law:'斷電電池≥20或60分，梯面照度≥1 lux'},
-  alarm:{ico:'🔔',bg:'var(--c-amber-bg)',name:'手動報警機',law:'故障燈亮即排除'},
-  smoke:{ico:'🌫',bg:'var(--c-amber-bg)',name:'偵煙探測器',law:'故障燈亮即排除'},
-  ext:{ico:'🧯',bg:'var(--c-red-bg)',name:'滅火器',law:'過期即刻汰換'},
-  pump:{ico:'💧',bg:'var(--c-blue-bg)',name:'消防幫浦系統',law:'燈號及蜂鳴器需正常'},
-  dir:{ico:'➡',bg:'var(--c-gray-bg)',name:'方向燈',law:'斷電後電池≥20或60分鐘，光度≥25 cd'},
+// ── Extinguisher floors per building ─────────────────────────────────────────
+const EXT_FLOORS = {
+  'A':    ['14F','13F','12F','11F','10F','9F','8F','7F','6F','5F','4F','3F','2F','1MF','1F','B1F','B2F'],
+  'B':    ['13F','12F','11F','10F','9F','8F','7F','6F','5F','4F','3F','2F','1F','B1F','B2F'],
+  'C':    ['RF','14F','13F','12F','11F','10F','9F','8F','7F','6F','5F','4F','3F','2F','1MF','1F'],
+  'D':    ['RF','14F','13F','12F','11F','10F','9F','8F','7F','6F','5F','4F','3F','2F','1MF','1F','B1F'],
+  'E':    ['RF','13F','12F','11F','10F','9F','8F','7F','6F','5F','4F','3F','2F','1F'],
+  'F':    ['12F','11F','10F','9F','8F','7F','6F','5F','4F','3F','2F','1F'],
+  'G':    ['RF','13F','12F','11F','10F','9F','8F','7F','6F','5F','4F','3F','2F','1F','B1F'],
+  'B1B2': ['B1F','B2F'],
+  'sys':  [],
 };
 
-const f=l=>({label:l,defect:false});
-const fd=l=>({label:l,defect:true});
+// ── Category definitions ──────────────────────────────────────────────────────
+const CATS={
+  illum: {ico:'💡',bg:'var(--c-teal-bg)',  name:'照明燈',      law:'斷電後電池≥30分鐘，照度≥2~10 lux'},
+  exit:  {ico:'🚪',bg:'var(--c-grn-bg)',   name:'出口燈',      law:'斷電後電池≥20或60分鐘，光度≥20 cd'},
+  sign:  {ico:'🔆',bg:'var(--c-grn-bg)',   name:'標示燈',      law:'斷電後電池≥20或60分鐘，光度≥25 cd'},
+  esc:   {ico:'🪜',bg:'var(--c-purple-bg)',name:'避難器具燈',  law:'斷電後電池≥20或60分鐘'},
+  stair: {ico:'🔢',bg:'var(--c-purple-bg)',name:'樓梯間樓層燈',law:'斷電電池≥20或60分，梯面照度≥1 lux'},
+  alarm: {ico:'🔔',bg:'var(--c-amber-bg)', name:'手動報警機',  law:'故障燈亮即排除'},
+  smoke: {ico:'🌫',bg:'var(--c-amber-bg)', name:'偵煙探測器',  law:'故障燈亮即排除'},
+  ext:   {ico:'🧯',bg:'var(--c-red-bg)',   name:'滅火器',      law:'過期即刻汰換'},
+  pump:  {ico:'💧',bg:'var(--c-blue-bg)',  name:'消防幫浦系統',law:'燈號及蜂鳴器需正常'},
+  dir:   {ico:'➡',bg:'var(--c-gray-bg)',   name:'方向燈',      law:'斷電後電池≥20或60分鐘，光度≥25 cd'},
+};
+
+const f  = l => ({label:l,defect:false});
+const fd = l => ({label:l,defect:true});
 function si(all,def){const s=new Set(def);return all.map(l=>({label:l,defect:s.has(l)}))}
 
+// ── Stair lamp arrays ─────────────────────────────────────────────────────────
 const A_ALL=['14F↑13F↓','13F↑12F↓','12F↑11F↓','11F↑10F↓','10F↑9F↓','9F↑8F↓','8F↑7F↓','7F↑6F↓','6F↑5F↓','5F↑4F↓','4F↑3F↓','3F↑2F↓','2F↑1MF↓','1MF↑1F↓','1F↑B1F↓','B1F↑B2F↓'];
 const A_DEF=['14F↑13F↓','13F↑12F↓','12F↑11F↓','11F↑10F↓','10F↑9F↓','9F↑8F↓','7F↑6F↓','5F↑4F↓','4F↑3F↓','3F↑2F↓','1MF↑1F↓','1F↑B1F↓','B1F↑B2F↓'];
 const B_ALL=['13F↑12F↓','12F↑11F↓','11F↑10F↓','10F↑9F↓','9F↑8F↓','8F↑7F↓','7F↑6F↓','6F↑5F↓','5F↑4F↓','4F↑3F↓','3F↑2F↓','2F↑1MF↓','1MF↑1F↓','1F↑B1F↓','B1F↑B2F↓'];
@@ -371,50 +317,51 @@ const E_DEF=['13F↑12F↓','7F↑6F↓','5F↑4F↓'];
 const G_ALL=['RF↑13F↓','13F↑12F↓','12F↑11F↓','11F↑10F↓','10F↑9F↓','9F↑8F↓','8F↑7F↓','7F↑6F↓','6F↑5F↓','5F↑4F↓','4F↑3F↓','3F↑2F↓','2F↑1MF↓','1MF↑1F↓','1F↑B1F↓'];
 const G_DEF=['RF↑13F↓','8F↑7F↓','5F↑4F↓','3F↑2F↓'];
 
+// ── Building data ─────────────────────────────────────────────────────────────
 const BLDS=[
   {id:'A',name:'A棟',cats:[
     {cat:'alarm',items:[fd('10F 手報機'),fd('8F 手報機')]},
-    {cat:'sign',items:[fd('8F 標示燈'),fd('4F 標示燈')]},
+    {cat:'sign', items:[fd('8F 標示燈'),fd('4F 標示燈')]},
     {cat:'illum',items:[fd('2F 照明燈')]},
     {cat:'stair',items:si(A_ALL,A_DEF)},
   ]},
   {id:'B',name:'B棟',cats:[
     {cat:'alarm',items:[fd('12F 手報機'),fd('11F 手報機')]},
-    {cat:'exit',items:[fd('B2F 出口燈')]},
+    {cat:'exit', items:[fd('B2F 出口燈')]},
     {cat:'illum',items:[fd('B1F 照明燈')]},
     {cat:'stair',items:si(B_ALL,B_DEF)},
   ]},
   {id:'C',name:'C棟',cats:[
     {cat:'alarm',items:[fd('11F 手報機'),fd('8F 手報機'),fd('2F 手報機')]},
-    {cat:'sign',items:[fd('5F 標示燈')]},
-    {cat:'exit',items:[fd('RF 出口燈')]},
+    {cat:'sign', items:[fd('5F 標示燈')]},
+    {cat:'exit', items:[fd('RF 出口燈')]},
     {cat:'stair',items:si(C_ALL,C_DEF)},
   ]},
   {id:'D',name:'D棟',cats:[
     {cat:'alarm',items:[fd('13F 手報機'),fd('10F 手報機'),fd('9F 手報機'),fd('8F 手報機'),fd('5F 手報機'),fd('2F 手報機'),fd('1F 手報機'),fd('B1F 手報機')]},
-    {cat:'exit',items:[fd('RF 出口燈')]},
+    {cat:'exit', items:[fd('RF 出口燈')]},
     {cat:'illum',items:[fd('14F 照明燈')]},
     {cat:'stair',items:si(D_ALL,D_DEF)},
   ]},
   {id:'E',name:'E棟',cats:[
-    {cat:'exit',items:[fd('RF 出口燈')]},
-    {cat:'esc',items:[fd('8F 避難器具燈')]},
+    {cat:'exit', items:[fd('RF 出口燈')]},
+    {cat:'esc',  items:[fd('8F 避難器具燈')]},
     {cat:'illum',items:[fd('12F 照明燈（梯間）')]},
     {cat:'stair',items:si(E_ALL,E_DEF)},
   ]},
   {id:'F',name:'F棟',cats:[
     {cat:'smoke',items:[fd('3F 偵煙探測器')]},
-    {cat:'sign',items:[fd('11F 標示燈')]},
-    {cat:'exit',items:[fd('8F 出口燈'),fd('12F 出口燈')]},
+    {cat:'sign', items:[fd('11F 標示燈')]},
+    {cat:'exit', items:[fd('8F 出口燈'),fd('12F 出口燈')]},
   ]},
   {id:'G',name:'G棟',cats:[
-    {cat:'esc',items:[fd('10F 避難器具燈'),fd('4F 避難器具燈')]},
+    {cat:'esc',  items:[fd('10F 避難器具燈'),fd('4F 避難器具燈')]},
     {cat:'illum',items:[fd('B1F 照明燈（缺件）'),fd('4F 照明燈'),fd('6F 照明燈（梯間）'),fd('7F 照明燈（梯間）')]},
     {cat:'stair',items:si(G_ALL,G_DEF)},
   ]},
   {id:'B1B2',name:'地下室（B1F／B2F）',cats:[
     {cat:'illum',items:[fd('B1F 195機車位 照明燈'),fd('B1F 114旁 照明燈')]},
-    {cat:'dir',items:[
+    {cat:'dir',  items:[
       fd('B1F 167車位 方向燈'),fd('B1F 97車位 方向燈'),
       fd('B1F 108車位 方向燈'),fd('B1F 128車位 方向燈'),
       fd('B1F 195車位 左向燈'),fd('B2F 35車位 方向燈'),
@@ -422,7 +369,7 @@ const BLDS=[
     ]},
   ]},
   {id:'sys',name:'全區消防系統',cats:[
-    {cat:'ext',items:[{label:'全區 滅火器過期（135支）',defect:true,sev:'h'}]},
+    {cat:'ext', items:[{label:'全區 滅火器過期（135支）',defect:true,sev:'h'}]},
     {cat:'pump',items:[
       {label:'泡沫 呼水槽鏽蝕',defect:true,sev:'h'},
       {label:'泡沫 連軸器墊片損壞（4只）',defect:true,sev:'h'},
@@ -432,94 +379,199 @@ const BLDS=[
   ]},
 ];
 
-/* --- LAWS 附錄條文修正 (整合最新標準) --- */
 const LAWS=[
-  {ico:'🧯',bg:'var(--c-red-bg)',name:'滅火器',sev:true,
-   ref:'消防法 §13：管理權人應維護消防安全設備正常功能。設置標準 §31：滅火器每年至少委託合格業者檢修一次，逾期未檢或藥劑失效應即更換。',
-   plain:'滅火器過了有效期就等於擺假的。每年要找合格廠商檢修，藥劑或壓力不足要馬上換，消防局查到會直接開罰。'},
-  {ico:'💧',bg:'var(--c-blue-bg)',name:'消防幫浦系統',sev:true,
-   ref:'設置標準 §28（室內消防栓）：幫浦啟動後30秒內需達規定壓力，控制盤所有燈號需正常。§32（撒水）：蜂鳴器、電源燈、過載燈故障均為異常，需立即排除。§42（泡沫）：呼水槽需維持正常水位及結構完整，連軸器損壞需即時更換。',
-   plain:'幫浦是滅火的心臟。控制盤任何燈故障或蜂鳴器叫，代表系統有問題，火災時可能打不出水。呼水槽鏽蝕會讓系統空轉，連軸器壞了幫浦根本轉不動。'},
-  {ico:'🔔',bg:'var(--c-amber-bg)',name:'手動報警機',sev:true,
-   ref:'設置標準 §113：火災警報設備應維持隨時可用狀態，故障指示燈亮起即為異常，需在最短時間修復。消防法 §6：管理權人負維護義務，違者依 §42 裁罰。',
-   plain:'手報機就是火災時第一個要打破玻璃、按下去發警報的設備。壞掉的話，火場裡的人根本不知道要逃。故障燈亮就要修，不能放著。'},
-  {ico:'🌫',bg:'var(--c-amber-bg)',name:'偵煙探測器',sev:true,
-   ref:'設置標準 §118：偵煙型探測器需能在煙霧達規定濃度時自動觸發，任何故障須立即排除，不得以停用方式替代維修。',
-   plain:'偵煙器是系統自動發現火災的眼睛。壞掉就等於瞎了，初期火災沒人知道。不能因為它不叫就當沒事，要換掉。'},
-  {ico:'🚪',bg:'var(--c-grn-bg)',name:'出口燈／標示燈',sev:false,
-   ref:'設置標準 §146-5、§155：出口標示燈光度須在20 cd以上，避難方向指示燈光度須在25 cd以上。斷電後由蓄電池自動切換，持續亮燈不得少於20分鐘（特定大型或地下建築為60分鐘）。',
-   plain:'法規對亮度有嚴格規定，不是有亮就好！停電時要靠電池亮至少20分鐘（大型/地下空間須達60分鐘）。燈具故障、亮度不達標、或電池續航力不足，都算違規必須修繕。'},
-  {ico:'🪜',bg:'var(--c-purple-bg)',name:'避難器具燈',sev:false,
-   ref:'設置標準 §149：避難器具設置位置需以指示燈標示，斷電後電池供電時間比照標示燈標準（≥20分鐘或特定場所≥60分鐘）。',
-   plain:'這個燈是告訴人「這裡有緩降機可以逃」。燈壞了大家在煙霧中找不到器材，電池供電時間一樣必須符合20或60分鐘的規範。'},
-  {ico:'🔢',bg:'var(--c-purple-bg)',name:'樓梯間樓層燈',sev:false,
-   ref:'設置標準 §146-5、§155：樓梯之避難方向指示燈，照於樓梯級面之照度須在1 lux以上；斷電後蓄電池供電維持≥20分鐘（或特定場所≥60分鐘）。',
-   plain:'樓梯間的燈如果不夠亮，逃生時很容易跌倒或走錯方向。法規要求照在階梯上的亮度必須達1 lux以上，且停電時電池至少要能撐20分鐘。'},
-  {ico:'💡',bg:'var(--c-teal-bg)',name:'照明燈（走廊／梯間）',sev:false,
-   ref:'設置標準 §177、§178：停電後緊急電源需於10秒內自動切換，並維持≥30分鐘。地面水平照度一般場所≥2 lux，地下通道則需≥10 lux。',
-   plain:'這是一般的緊急照明，停電要能維持30分鐘。如果是地下室通道，因為更危險，亮度要求高達10 lux。達不到時間或亮度就不合格。'},
-  {ico:'➡',bg:'var(--c-gray-bg)',name:'地下室方向燈',sev:false,
-   ref:'設置標準 §146-5、§155：地下層避難方向指示燈需指向最近安全梯或出口，兩面燈需正常，光度≥25 cd；斷電後電池須維持≥60分鐘（地下建築物標準）。',
-   plain:'地下室沒有自然採光，方向燈要清楚指向出口。因為是地下空間，電池標準更嚴格通常需要撐滿60分鐘，任何一顆不亮都可能讓人在濃煙中迷路。'},
+  {ico:'🧯',bg:'var(--c-red-bg)',name:'滅火器',sev:true,ref:'消防法 §13：管理權人應維護消防安全設備正常功能。設置標準 §31：滅火器每年至少委託合格業者檢修一次，逾期未檢或藥劑失效應即更換。',plain:'滅火器過了有效期就等於擺假的。每年要找合格廠商檢修，藥劑或壓力不足要馬上換，消防局查到會直接開罰。'},
+  {ico:'💧',bg:'var(--c-blue-bg)',name:'消防幫浦系統',sev:true,ref:'設置標準 §28（室內消防栓）：幫浦啟動後30秒內需達規定壓力，控制盤所有燈號需正常。§32（撒水）：蜂鳴器、電源燈、過載燈故障均為異常，需立即排除。§42（泡沫）：呼水槽需維持正常水位及結構完整，連軸器損壞需即時更換。',plain:'幫浦是滅火的心臟。控制盤任何燈故障或蜂鳴器叫，代表系統有問題，火災時可能打不出水。呼水槽鏽蝕會讓系統空轉，連軸器壞了幫浦根本轉不動。'},
+  {ico:'🔔',bg:'var(--c-amber-bg)',name:'手動報警機',sev:true,ref:'設置標準 §113：火災警報設備應維持隨時可用狀態，故障指示燈亮起即為異常，需在最短時間修復。消防法 §6：管理權人負維護義務，違者依 §42 裁罰。',plain:'手報機就是火災時第一個要打破玻璃、按下去發警報的設備。壞掉的話，火場裡的人根本不知道要逃。故障燈亮就要修，不能放著。'},
+  {ico:'🌫',bg:'var(--c-amber-bg)',name:'偵煙探測器',sev:true,ref:'設置標準 §118：偵煙型探測器需能在煙霧達規定濃度時自動觸發，任何故障須立即排除，不得以停用方式替代維修。',plain:'偵煙器是系統自動發現火災的眼睛。壞掉就等於瞎了，初期火災沒人知道。不能因為它不叫就當沒事，要換掉。'},
+  {ico:'🚪',bg:'var(--c-grn-bg)',name:'出口燈／標示燈',sev:false,ref:'設置標準 §146-5、§155：出口標示燈光度須在20 cd以上，避難方向指示燈光度須在25 cd以上。斷電後由蓄電池自動切換，持續亮燈不得少於20分鐘（特定大型或地下建築為60分鐘）。',plain:'法規對亮度有嚴格規定，不是有亮就好！停電時要靠電池亮至少20分鐘（大型/地下空間須達60分鐘）。燈具故障、亮度不達標、或電池續航力不足，都算違規必須修繕。'},
+  {ico:'🪜',bg:'var(--c-purple-bg)',name:'避難器具燈',sev:false,ref:'設置標準 §149：避難器具設置位置需以指示燈標示，斷電後電池供電時間比照標示燈標準（≥20分鐘或特定場所≥60分鐘）。',plain:'這個燈是告訴人「這裡有緩降機可以逃」。燈壞了大家在煙霧中找不到器材，電池供電時間一樣必須符合20或60分鐘的規範。'},
+  {ico:'🔢',bg:'var(--c-purple-bg)',name:'樓梯間樓層燈',sev:false,ref:'設置標準 §146-5、§155：樓梯之避難方向指示燈，照於樓梯級面之照度須在1 lux以上；斷電後蓄電池供電維持≥20分鐘（或特定場所≥60分鐘）。',plain:'樓梯間的燈如果不夠亮，逃生時很容易跌倒或走錯方向。法規要求照在階梯上的亮度必須達1 lux以上，且停電時電池至少要能撐20分鐘。'},
+  {ico:'💡',bg:'var(--c-teal-bg)',name:'照明燈（走廊／梯間）',sev:false,ref:'設置標準 §177、§178：停電後緊急電源需於10秒內自動切換，並維持≥30分鐘。地面水平照度一般場所≥2 lux，地下通道則需≥10 lux。',plain:'這是一般的緊急照明，停電要能維持30分鐘。如果是地下室通道，因為更危險，亮度要求高達10 lux。達不到時間或亮度就不合格。'},
+  {ico:'➡',bg:'var(--c-gray-bg)',name:'地下室方向燈',sev:false,ref:'設置標準 §146-5、§155：地下層避難方向指示燈需指向最近安全梯或出口，兩面燈需正常，光度≥25 cd；斷電後電池須維持≥60分鐘（地下建築物標準）。',plain:'地下室沒有自然採光，方向燈要清楚指向出口。因為是地下空間，電池標準更嚴格通常需要撐滿60分鐘，任何一顆不亮都可能讓人在濃煙中迷路。'},
 ];
 
-let chk={};
-let allKeys=[];
-function mkKey(bid,ci,ii){return bid+'|'+ci+'|'+ii}
+// ── State ─────────────────────────────────────────────────────────────────────
+let chk = {}; // {key: '' | 'ok' | 'recheck' | 'repair' | 'done'}
+let ext = {}; // {extKey: {exp:string, pressure:boolean}}
+let allKeys = [];
+function mkKey(bid,ci,ii){ return bid+'|'+ci+'|'+ii }
+function mkExtKey(bid,fl){ return 'ext|'+bid+'|'+fl }
 
+// ── Stats ─────────────────────────────────────────────────────────────────────
 function updStats(){
-  const tot=allKeys.length,dn=Object.values(chk).filter(Boolean).length;
-  document.getElementById('s-tot').textContent=tot;
-  document.getElementById('s-dn').textContent=dn;
-  document.getElementById('s-pct').textContent=Math.round(dn/tot*100)+'%';
-  document.getElementById('pb-global').style.width=Math.round(dn/tot*100)+'%';
+  let repair=0,recheck=0,done=0,ok=0,pending=0;
+  allKeys.forEach(k=>{
+    const s=chk[k]||'';
+    if(s==='repair')repair++;
+    else if(s==='recheck')recheck++;
+    else if(s==='done')done++;
+    else if(s==='ok')ok++;
+    else pending++;
+  });
+  const handled=allKeys.length-pending;
+  const pct=allKeys.length?Math.round(handled/allKeys.length*100):0;
+  document.getElementById('s-repair').textContent=repair;
+  document.getElementById('s-recheck').textContent=recheck;
+  document.getElementById('s-done').textContent=done;
+  document.getElementById('s-ok').textContent=ok;
+  document.getElementById('s-pct').textContent=pct+'%';
+  document.getElementById('pb-global').style.width=pct+'%';
   BLDS.forEach(b=>{
     const bk=allKeys.filter(k=>k.startsWith(b.id+'|'));
-    const bt=bk.length,bd=bk.filter(k=>chk[k]).length;
+    const bt=bk.length;
+    const br=bk.filter(k=>chk[k]==='repair').length;
+    const brc=bk.filter(k=>chk[k]==='recheck').length;
+    const bpend=bk.filter(k=>!chk[k]).length;
+    const bhandled=bt-bpend;
     const pb=document.getElementById('pb-'+b.id);
     const bdg=document.getElementById('bdg-'+b.id);
-    if(pb)pb.style.width=bt?Math.round(bd/bt*100)+'%':'0%';
-    if(bdg){bdg.textContent=bd+'/'+bt+' 已複查';bdg.className='bdg '+(bd===bt&&bt>0?'bdg-g':'bdg-r')}
+    if(pb) pb.style.width=bt?Math.round(bhandled/bt*100)+'%':'0%';
+    if(bdg){
+      if(br>0){bdg.textContent=br+' 需修繕';bdg.className='bdg bdg-r';}
+      else if(brc>0){bdg.textContent=brc+' 待複查';bdg.className='bdg bdg-amber';}
+      else if(bpend>0){bdg.textContent=bpend+' 待確認';bdg.className='bdg bdg-r';}
+      else{bdg.textContent='全數確認';bdg.className='bdg bdg-g';}
+    }
   });
 }
+
+// ── Extinguisher row update ───────────────────────────────────────────────────
+function updExtRow(key){
+  const d=ext[key]||{exp:'',pressure:false};
+  const row=document.getElementById('er-'+key);
+  if(!row)return;
+  const pill=document.getElementById('ep-'+key);
+  const hasExp=!!d.exp;
+  row.className='ext-row'+(hasExp&&d.pressure?' ext-ok':hasExp&&!d.pressure?' ext-bad':'');
+  if(pill){
+    if(!hasExp){pill.textContent='待查核';pill.className='ext-pill ext-pill-pend';}
+    else if(d.pressure){pill.textContent='查核完成';pill.className='ext-pill ext-pill-ok';}
+    else{pill.textContent='壓力異常';pill.className='ext-pill ext-pill-bad';}
+  }
+}
+
+function updExtStats(bid){
+  const floors=EXT_FLOORS[bid]||[];
+  const done=floors.filter(fl=>{const d=ext[mkExtKey(bid,fl)];return d&&d.exp&&d.pressure;}).length;
+  const bad=floors.filter(fl=>{const d=ext[mkExtKey(bid,fl)];return d&&d.exp&&!d.pressure;}).length;
+  const el=document.getElementById('ext-stats-'+bid);
+  if(el){
+    if(bad>0) el.textContent=bad+' 壓力異常';
+    else el.textContent=done+'/'+floors.length+' 完成';
+  }
+}
+
+// ── Render ────────────────────────────────────────────────────────────────────
+function scrollToTop(){window.scrollTo({top:0,behavior:'smooth'})}
 
 function render(){
   const con=document.getElementById('content');
   con.innerHTML='';
+  allKeys=[];
+
   BLDS.forEach(b=>{
     const card=document.createElement('div');card.className='bld-card';
+
+    // Keys for this building
     const bk=[];
     b.cats.forEach((cg,ci)=>cg.items.forEach((_,ii)=>bk.push(mkKey(b.id,ci,ii))));
     bk.forEach(k=>allKeys.push(k));
+
+    // Header
     const hd=document.createElement('div');hd.className='bld-hd';
     hd.innerHTML=`<div class="bld-name">${b.name}</div><span class="bdg bdg-r" id="bdg-${b.id}">${bk.length} 項待查</span><span class="tog op" id="tog-${b.id}">▼</span>`;
+
+    // Body
     const body=document.createElement('div');body.id='body-'+b.id;
     const pb=document.createElement('div');pb.className='pbr';
     pb.innerHTML=`<div class="pbf" id="pb-${b.id}" style="width:0%"></div>`;
     body.appendChild(pb);
+
+    // Stair legend
     if(b.cats.some(c=>c.cat==='stair')){
       const leg=document.createElement('div');leg.className='legend';
       leg.innerHTML=`<div class="leg-i"><span style="color:var(--c-orange);font-weight:700;font-size:14px">▶</span>&nbsp;原有缺失，重點確認</div><div class="leg-i"><span style="color:var(--c-text3)">□</span>&nbsp;全面清查格</div>`;
       body.appendChild(leg);
     }
+
+    // Categories
     b.cats.forEach((cg,ci)=>{
       const c=CATS[cg.cat];
       const chd=document.createElement('div');chd.className='cat-hd';
       chd.innerHTML=`<div class="cat-ico" style="background:${c.bg}">${c.ico}</div><span class="cat-name">${c.name}</span><span class="cat-law">${c.law}</span>`;
       body.appendChild(chd);
+
       const grid=document.createElement('div');grid.className='grid';
       cg.items.forEach((it,ii)=>{
         const k=mkKey(b.id,ci,ii);
+        const s=chk[k]||'';
         const cell=document.createElement('div');
         cell.id='cell-'+k;
-        cell.className='cell'+(chk[k]?' done':'');
+        cell.className='cell';
+        cell.dataset.key=k;
+        cell.dataset.status=s;
         const mark=it.defect?'<span class="dm">&#9658;</span>':'';
         const sev=it.sev==='h'?'<span class="sev-h">優先</span>':'';
-        cell.innerHTML=`${mark}<input type="checkbox" data-key="${k}" ${chk[k]?'checked':''}><span class="cell-txt">${it.label}${sev}</span>`;
+        cell.innerHTML=`<span class="st ${STATUS_CLS[s]}" id="st-${k}">${STATUS_MARK[s]}</span>${mark}<span class="cell-txt">${it.label}${sev}</span>`;
         grid.appendChild(cell);
       });
       body.appendChild(grid);
     });
+
+    // ── Extinguisher section ──────────────────────────────────
+    const extFloors=EXT_FLOORS[b.id]||[];
+    if(extFloors.length>0){
+      const extHd=document.createElement('div');extHd.className='ext-hd';
+      extHd.innerHTML=`<span style="font-size:14px">🧯</span><span class="ext-hd-title">滅火器逐層查核</span><span class="ext-hd-stat" id="ext-stats-${b.id}">0/${extFloors.length} 完成</span><span class="tog" id="ext-tog-${b.id}">▼</span>`;
+      body.appendChild(extHd);
+
+      const extBody=document.createElement('div');
+      extBody.id='ext-body-'+b.id;
+      extBody.style.display='none';
+
+      extFloors.forEach(fl=>{
+        const key=mkExtKey(b.id,fl);
+        const d=ext[key]||{exp:'',pressure:false};
+        const hasExp=!!d.exp;
+        const row=document.createElement('div');
+        row.id='er-'+key;
+        row.className='ext-row'+(hasExp&&d.pressure?' ext-ok':hasExp&&!d.pressure?' ext-bad':'');
+        row.innerHTML=`
+          <span class="ext-fl">${fl}</span>
+          <input type="text" class="ext-exp" placeholder="116/03" value="${d.exp||''}" id="eexp-${key}" inputmode="text" maxlength="6">
+          <label class="ext-pr"><input type="checkbox" id="epr-${key}" ${d.pressure?'checked':''}> 壓力正常</label>
+          <span class="ext-pill ${hasExp?(d.pressure?'ext-pill-ok':'ext-pill-bad'):'ext-pill-pend'}" id="ep-${key}">${hasExp?(d.pressure?'查核完成':'壓力異常'):'待查核'}</span>`;
+        extBody.appendChild(row);
+
+        // Events
+        const inp=row.querySelector('input[type=text]');
+        inp.addEventListener('input',()=>{
+          if(!ext[key])ext[key]={exp:'',pressure:false};
+          ext[key].exp=inp.value;
+          updExtRow(key);updExtStats(b.id);saveExt();
+        });
+        const cbx=row.querySelector('input[type=checkbox]');
+        cbx.addEventListener('change',()=>{
+          if(!ext[key])ext[key]={exp:'',pressure:false};
+          ext[key].pressure=cbx.checked;
+          updExtRow(key);updExtStats(b.id);saveExt();
+        });
+      });
+
+      body.appendChild(extBody);
+
+      extHd.addEventListener('click',()=>{
+        const open=extBody.style.display!=='none';
+        extBody.style.display=open?'none':'';
+        const tog=document.getElementById('ext-tog-'+b.id);
+        if(tog)tog.className='tog'+(open?'':' op');
+      });
+
+      updExtStats(b.id);
+    }
+
+    // Card assembly + toggle
     card.appendChild(hd);card.appendChild(body);con.appendChild(card);
     hd.addEventListener('click',()=>{
       const open=body.style.display!=='none';
@@ -527,12 +579,26 @@ function render(){
       document.getElementById('tog-'+b.id).className='tog'+(open?'':' op');
     });
   });
+
+  // Cell click → cycle status (event delegation)
+  con.addEventListener('click',e=>{
+    const cell=e.target.closest('.cell');
+    if(!cell)return;
+    const k=cell.dataset.key;
+    if(k)cycleStatus(k);
+  });
+
+  // Restore checked states
   loadChk();
   allKeys.forEach(k=>{
-    const cb=document.querySelector('input[data-key="'+k+'"]');
+    const s=chk[k]||'';
     const cell=document.getElementById('cell-'+k);
-    if(cb&&chk[k]){cb.checked=true;if(cell)cell.className='cell done';}
+    const badge=document.getElementById('st-'+k);
+    if(cell){cell.dataset.status=s;}
+    if(badge){badge.textContent=STATUS_MARK[s];badge.className='st '+STATUS_CLS[s];}
   });
+
+  // Appendix
   const appCard=document.createElement('div');appCard.className='app-card';
   appCard.innerHTML=`<div class="app-title">附錄：法源依據對照表<div class="app-sub">各類消防設備對應法規條文與修繕標準</div></div>`;
   LAWS.forEach(law=>{
@@ -541,18 +607,144 @@ function render(){
     appCard.appendChild(item);
   });
   con.appendChild(appCard);
-  con.addEventListener('change',e=>{
-    if(e.target.type==='checkbox'){
-      const k=e.target.dataset.key;
-      chk[k]=e.target.checked;
-      const cell=document.getElementById('cell-'+k);
-      if(cell)cell.className='cell'+(e.target.checked?' done':'');
-      saveChk();
-      updStats();
-    }
-  });
+
   updStats();
 }
+
+// ── Report ────────────────────────────────────────────────────────────────────
+function openReport(){
+  const now=new Date();
+  const ts=now.getFullYear()+'/'+(now.getMonth()+1).toString().padStart(2,'0')+'/'+now.getDate().toString().padStart(2,'0')+' '+now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0');
+  const tot=allKeys.length;
+  const cnt={repair:0,recheck:0,done:0,ok:0,pending:0};
+  allKeys.forEach(k=>{const s=chk[k]||'';if(cnt[s]!==undefined)cnt[s]++;else cnt.pending++;});
+  let html=`<div class="report-meta">巡查日期：115/04/14<br>輸出時間：${ts}<br>需修繕：${cnt.repair}項　待複查：${cnt.recheck}項　已完修：${cnt.done}項　正常：${cnt.ok}項　待確認：${cnt.pending}項<br>地點：新北市汐止區福德一路56號</div>`;
+  BLDS.forEach((b,bi)=>{
+    const bkeys=allKeys.filter(k=>k.startsWith(b.id+'|'));
+    html+=`<div class="report-section"><div class="report-sec-title">${b.name} <span style="font-size:11px;font-weight:400;color:var(--c-text2)">${bkeys.length} 項</span></div>`;
+    b.cats.forEach((cg,ci)=>{
+      const c=CATS[cg.cat];
+      cg.items.forEach((it,ii)=>{
+        const k=mkKey(b.id,ci,ii);
+        const s=chk[k]||'';
+        const cls=s==='repair'?'ri-repair':s==='recheck'?'ri-recheck':s==='done'?'ri-done':s==='ok'?'ri-ok':'ri-no';
+        const lbl=STATUS_LABEL[s];
+        html+=`<div class="report-item"><span class="${cls}">[${lbl}]</span><span>${it.label}</span></div>`;
+      });
+    });
+    // Extinguisher summary
+    const extFloors=EXT_FLOORS[b.id]||[];
+    if(extFloors.length>0){
+      const issues=extFloors.filter(fl=>{const d=ext[mkExtKey(b.id,fl)];return d&&d.exp&&!d.pressure;});
+      const done=extFloors.filter(fl=>{const d=ext[mkExtKey(b.id,fl)];return d&&d.exp&&d.pressure;});
+      if(issues.length>0||done.length>0){
+        html+=`<div class="report-item"><span class="ri-repair">[🧯滅火器]</span><span>查核：${done.length}完成 / ${issues.length>0?'壓力異常：'+issues.join('、'):'無異常'}</span></div>`;
+      }
+    }
+    html+='</div>';
+  });
+  document.getElementById('modal-body').innerHTML=html;
+  document.getElementById('copy-ok').style.display='none';
+  document.getElementById('modal-bg').className='modal-bg show';
+}
+
+function closeReport(){document.getElementById('modal-bg').className='modal-bg';}
+function bgClick(e){if(e.target===document.getElementById('modal-bg'))closeReport();}
+
+function printReportToPDF(){
+  const now=new Date();
+  const ts=now.getFullYear()+'/'+(now.getMonth()+1).toString().padStart(2,'0')+'/'+now.getDate().toString().padStart(2,'0')+' '+now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0');
+  const cnt={repair:0,recheck:0,done:0,ok:0,pending:0};
+  allKeys.forEach(k=>{const s=chk[k]||'';if(cnt[s]!==undefined)cnt[s]++;else cnt.pending++;});
+  let html=`<div class="print-header"><h1>伊登花園 消防設備缺失複查報告書</h1>
+    <div class="print-meta"><span><strong>巡查日期：</strong>115/04/14</span><span><strong>輸出時間：</strong>${ts}</span></div>
+    <div class="print-meta"><span><strong>社區地點：</strong>新北市汐止區福德一路56號</span><span><strong>檢修負責人：</strong>上羿機電 劉稼宏</span></div>
+    <div class="print-meta"><span><strong>需修繕：</strong>${cnt.repair}</span><span><strong>待複查：</strong>${cnt.recheck}</span><span><strong>已完修：</strong>${cnt.done}</span><span><strong>正常：</strong>${cnt.ok}</span><span><strong>待確認：</strong>${cnt.pending}</span></div></div>`;
+
+  BLDS.forEach(b=>{
+    const bkeys=allKeys.filter(k=>k.startsWith(b.id+'|'));
+    if(bkeys.length===0)return;
+    html+=`<div class="print-bld-section"><div class="print-bld-title">${b.name}</div>
+      <table class="print-table"><thead><tr><th width="30%">設備類型</th><th width="40%">檢查項目</th><th width="30%">複查狀態</th></tr></thead><tbody>`;
+    b.cats.forEach((cg,ci)=>{
+      const c=CATS[cg.cat];
+      cg.items.forEach((it,ii)=>{
+        const k=mkKey(b.id,ci,ii);
+        const s=chk[k]||'';
+        const cls='print-status-'+(s||'pending');
+        html+=`<tr><td>${c.name}<br><span style="color:#555;font-size:11px">${c.law}</span></td><td>${it.label}</td><td class="${cls}">${STATUS_LABEL[s]}</td></tr>`;
+      });
+    });
+    // Extinguisher in print
+    const extFloors=EXT_FLOORS[b.id]||[];
+    if(extFloors.length>0){
+      html+=`<tr><td colspan="3" style="background:#fdf4e7;font-weight:700;color:#7a4400">🧯 滅火器查核記錄</td></tr>`;
+      html+=`<tr><th>樓層</th><th>有效期限</th><th>壓力正常</th></tr>`;
+      extFloors.forEach(fl=>{
+        const d=ext[mkExtKey(b.id,fl)]||{};
+        const pCls=d.exp&&!d.pressure?'print-status-repair':d.pressure?'print-status-ok':'print-status-pending';
+        html+=`<tr><td>${fl}</td><td>${d.exp||'—'}</td><td class="${pCls}">${d.exp?(d.pressure?'正常':'壓力異常'):'待查核'}</td></tr>`;
+      });
+    }
+    html+=`</tbody></table></div>`;
+  });
+
+  html+=`<div><div class="print-header" style="margin-bottom:20px"><h2>附錄：法源依據與檢修標準</h2></div>`;
+  LAWS.forEach(law=>{
+    html+=`<div class="print-appendix-item"><h3 style="margin:0 0 6px 0;font-size:14px">${law.ico} ${law.name}</h3><p style="margin:0 0 6px 0;font-size:12px;line-height:1.5"><strong>法規依據：</strong>${law.ref}</p><p style="margin:0;font-size:12px;line-height:1.5"><strong>修繕標準：</strong>${law.plain}</p></div>`;
+  });
+  html+=`</div>`;
+  document.getElementById('print-area').innerHTML=html;
+  closeReport();
+  setTimeout(()=>window.print(),300);
+}
+
+function copyReport(){
+  const now=new Date();
+  const ts=now.getFullYear()+'/'+(now.getMonth()+1).toString().padStart(2,'0')+'/'+now.getDate().toString().padStart(2,'0');
+  const cnt={repair:0,recheck:0,done:0,ok:0,pending:0};
+  allKeys.forEach(k=>{const s=chk[k]||'';if(cnt[s]!==undefined)cnt[s]++;else cnt.pending++;});
+  let txt='【伊登花園消防缺失複查報告】\n巡查日期：115/04/14　輸出：'+ts+'\n';
+  txt+=`需修繕：${cnt.repair}　待複查：${cnt.recheck}　已完修：${cnt.done}　正常：${cnt.ok}　待確認：${cnt.pending}\n━━━━━━━━━━━━━━\n`;
+  BLDS.forEach(b=>{
+    txt+='\n【'+b.name+'】\n';
+    b.cats.forEach((cg,ci)=>{
+      const c=CATS[cg.cat];
+      cg.items.forEach((it,ii)=>{
+        const k=mkKey(b.id,ci,ii);
+        txt+='  ['+STATUS_LABEL[chk[k]||'']+'] '+it.label+'\n';
+      });
+    });
+    const extFloors=EXT_FLOORS[b.id]||[];
+    if(extFloors.length>0){
+      txt+='  🧯 滅火器：';
+      const issues=extFloors.filter(fl=>{const d=ext[mkExtKey(b.id,fl)];return d&&d.exp&&!d.pressure;});
+      txt+=(issues.length?'壓力異常 '+issues.join(' '):'查核中')+'\n';
+    }
+  });
+  txt+='━━━━━━━━━━━━━━\n（由伊登花園消防複查系統產生）';
+  if(navigator.clipboard){
+    navigator.clipboard.writeText(txt).then(()=>{const el=document.getElementById('copy-ok');el.style.display='block';setTimeout(()=>{el.style.display='none';},2500);});
+  }else{
+    const ta=document.createElement('textarea');ta.value=txt;ta.style.cssText='position:fixed;opacity:0';
+    document.body.appendChild(ta);ta.focus();ta.select();document.execCommand('copy');document.body.removeChild(ta);
+    const el=document.getElementById('copy-ok');el.style.display='block';setTimeout(()=>{el.style.display='none';},2500);
+  }
+}
+
+function confirmReset(){
+  if(confirm('確定要重置所有勾選與滅火器查核記錄嗎？此操作無法復原。')){
+    chk={};ext={};saveChk();saveExt();
+    document.getElementById('content').innerHTML='';
+    allKeys=[];
+    render();
+    closeReport();
+  }
+}
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+loadChk();
+loadExt();
 render();
 </script>
 </body>

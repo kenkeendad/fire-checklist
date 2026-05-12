@@ -106,6 +106,17 @@ body{background:var(--c-bg3);color:var(--c-text);font-family:-apple-system,Blink
 .cell[data-status="ok"] .cell-txt,
 .cell[data-status="done"] .cell-txt{text-decoration:line-through;color:var(--c-text3)}
 
+/* ── Lux input inside cell ── */
+.cell-with-lux{flex-direction:column;align-items:stretch;gap:3px}
+.cell-top{display:flex;align-items:flex-start;gap:6px}
+.cell-lux-row{display:flex;align-items:center;gap:4px;padding:3px 0 1px;border-top:1px dashed var(--c-border);cursor:default}
+.cell-lux-row:active{filter:none}
+.cell-lux-lbl{font-size:10px;color:var(--c-text3);white-space:nowrap;flex-shrink:0}
+.cell-lux-inp{width:54px;font-size:12px;padding:2px 4px;border:1px solid var(--c-border2);border-radius:4px;background:var(--c-bg);color:var(--c-text);outline:none;-webkit-appearance:none;text-align:right}
+.cell-lux-inp:focus{border-color:var(--c-blue)}
+.cell-lux-res{font-size:10px;font-weight:600;white-space:nowrap;flex:1}
+.lux-pass{color:var(--c-grn)}.lux-fail{color:var(--c-red)}.lux-neu{color:var(--c-text3)}
+
 /* ── Extinguisher section ── */
 .ext-hd{display:flex;align-items:center;gap:8px;padding:9px 14px;border-top:2px solid var(--c-border);background:var(--c-red-bg);cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent}
 .ext-hd:active{filter:brightness(.95)}
@@ -599,9 +610,61 @@ const LAWS=[
 // ── State ─────────────────────────────────────────────────────────────────────
 let chk = {}; // {key: '' | 'ok' | 'recheck' | 'repair' | 'done'}
 let ext = {}; // {extKey: {exp:string, pressure:boolean}}
+let luxData = {}; // {key: number}  — measured lux per item
 let allKeys = [];
 function mkKey(bid,ci,ii){ return bid+'|'+ci+'|'+ii }
 function mkExtKey(bid,fl){ return 'ext|'+bid+'|'+fl }
+
+// ── Lux spec per category (at 1 m: cd = lux numerically) ─────────────────────
+const LUX_SPEC = {
+  exit:  {unit:'cd',  min:20,  disp:'≥20 cd'},
+  sign:  {unit:'cd',  min:25,  disp:'≥25 cd'},
+  dir:   {unit:'cd',  min:25,  disp:'≥25 cd'},
+  illum: {unit:'lux', min:2,   disp:'≥2 lux (地下≥10)'},
+  stair: {unit:'lux', min:1,   disp:'≥1 lux'},
+};
+
+function luxResultStr(cat, lux, label){
+  const spec = LUX_SPEC[cat];
+  if(!spec) return '';
+  if(isNaN(lux) || lux === null) return '<span class="lux-neu">—</span>';
+  let min = spec.min;
+  // Underground areas need 10 lux for illum
+  if(cat==='illum' && label && /B1|B2/i.test(label)) min = 10;
+  const pass = lux >= min;
+  if(spec.unit === 'cd'){
+    // at 1 m: lux × 1² = cd
+    return `<span class="${pass?'lux-pass':'lux-fail'}">${lux.toFixed(1)} cd ${pass?'✓':'✗ (需≥'+min+')'}</span>`;
+  } else {
+    return `<span class="${pass?'lux-pass':'lux-fail'}">${lux.toFixed(1)} lux ${pass?'✓':'✗ (需≥'+min+')'}</span>`;
+  }
+}
+
+function saveLux(){ try{localStorage.setItem('luxData',JSON.stringify(luxData));}catch(e){} }
+function loadLux(){
+  try{
+    const d=localStorage.getItem('luxData');
+    if(d) luxData=JSON.parse(d);
+  }catch(e){ luxData={}; }
+}
+
+function onLuxChange(key, cat, label){
+  const inp = document.getElementById('lux-inp-'+key);
+  if(!inp) return;
+  const raw = inp.value.trim();
+  if(raw === ''){
+    delete luxData[key];
+  } else {
+    const v = parseFloat(raw);
+    if(!isNaN(v) && v >= 0) luxData[key] = v;
+  }
+  saveLux();
+  const res = document.getElementById('lux-res-'+key);
+  if(res){
+    const v = luxData[key];
+    res.innerHTML = (v !== undefined) ? luxResultStr(cat, v, label) : '<span class="lux-neu">—</span>';
+  }
+}
 
 // ── Stats ─────────────────────────────────────────────────────────────────────
 function updStats(){
@@ -708,17 +771,32 @@ function render(){
       body.appendChild(chd);
 
       const grid=document.createElement('div');grid.className='grid';
+      const hasLux = !!LUX_SPEC[cg.cat];
       cg.items.forEach((it,ii)=>{
         const k=mkKey(b.id,ci,ii);
         const s=chk[k]||'';
         const cell=document.createElement('div');
         cell.id='cell-'+k;
-        cell.className='cell';
+        cell.className='cell'+(hasLux?' cell-with-lux':'');
         cell.dataset.key=k;
         cell.dataset.status=s;
         const mark=it.defect?'<span class="dm">&#9658;</span>':'';
         const sev=it.sev==='h'?'<span class="sev-h">優先</span>':'';
-        cell.innerHTML=`<span class="st ${STATUS_CLS[s]}" id="st-${k}">${STATUS_MARK[s]}</span>${mark}<span class="cell-txt">${it.label}${sev}</span>`;
+        if(hasLux){
+          const lv = luxData[k];
+          const resHtml = (lv !== undefined) ? luxResultStr(cg.cat, lv, it.label) : '<span class="lux-neu">—</span>';
+          const spec = LUX_SPEC[cg.cat];
+          const unitHint = spec.unit==='cd' ? 'lux→cd@1m' : 'lux';
+          cell.innerHTML=`
+            <div class="cell-top"><span class="st ${STATUS_CLS[s]}" id="st-${k}">${STATUS_MARK[s]}</span>${mark}<span class="cell-txt">${it.label}${sev}</span></div>
+            <div class="cell-lux-row" onclick="event.stopPropagation()">
+              <span class="cell-lux-lbl">${unitHint}</span>
+              <input type="number" min="0" step="0.1" class="cell-lux-inp" id="lux-inp-${k}" placeholder="—" value="${lv !== undefined ? lv : ''}" inputmode="decimal" onchange="onLuxChange('${k}','${cg.cat}','${it.label.replace(/'/g,'\\'')}')">
+              <span class="cell-lux-res" id="lux-res-${k}">${resHtml}</span>
+            </div>`;
+        } else {
+          cell.innerHTML=`<span class="st ${STATUS_CLS[s]}" id="st-${k}">${STATUS_MARK[s]}</span>${mark}<span class="cell-txt">${it.label}${sev}</span>`;
+        }
         grid.appendChild(cell);
       });
       body.appendChild(grid);
@@ -880,7 +958,10 @@ function openReport(){
         const k=mkKey(b.id,ci,ii);
         const s=chk[k]||'';
         const cls=s==='repair'?'ri-repair':s==='recheck'?'ri-recheck':s==='done'?'ri-done':s==='ok'?'ri-ok':'ri-no';
-        html+=`<div class="report-item" data-rkey="${k}" data-rs="${s}"><span class="${cls}">[${STATUS_LABEL[s]}]</span><span>${it.label}</span><button class="ri-x" onclick="delReportItem('${k}')" title="從報告移除">✕</button></div>`;
+        const lv=luxData[k];
+        const luxTag = (lv !== undefined && LUX_SPEC[cg.cat])
+          ? ` <span style="font-size:10px;opacity:.75">[${LUX_SPEC[cg.cat].unit==='cd'?lv.toFixed(1)+' cd':lv.toFixed(1)+' lux'}]</span>` : '';
+        html+=`<div class="report-item" data-rkey="${k}" data-rs="${s}"><span class="${cls}">[${STATUS_LABEL[s]}]</span><span>${it.label}${luxTag}</span><button class="ri-x" onclick="delReportItem('${k}')" title="從報告移除">✕</button></div>`;
       });
     });
     // Extinguisher summary
@@ -1472,6 +1553,7 @@ function renderLuxLog(){
 // ── Init ─────────────────────────────────────────────────────────────────────
 loadChk();
 loadExt();
+loadLux();
 render();
 </script>
 </body>

@@ -324,14 +324,24 @@ body{background:var(--c-bg3);color:var(--c-text);font-family:-apple-system,Blink
         <!-- VirtualHub WiFi tab -->
         <div id="lux-tab-wifi" style="display:none">
           <div class="lux-tip">
-            <b>iPad / iPhone / 任何裝置（WiFi 方式）：</b><br>
-            1. 將感測器接上 <b>Mac 或 PC</b>（USB-C Hub → Micro-B）<br>
-            2. 電腦執行 <a href="https://www.yoctopuce.com/EN/virtualhub.php" style="color:var(--c-blue)">VirtualHub</a>（免費下載）<br>
-            3. 此頁面須用 <b>http://</b> 開啟，或下載 HTML 本機開啟<br>
-            4. 輸入電腦區網 IP → 點「連線」
+            <b>VirtualHub 連線方式：</b><br>
+            1. 將感測器插入電腦 USB，執行 <a href="https://www.yoctopuce.com/EN/virtualhub.php" style="color:var(--c-blue)">VirtualHub</a><br>
+            2. 本機連線 IP 填 <b>127.0.0.1</b>，Port <b>4444</b><br>
+            3. 跨裝置（手機→電腦）填電腦區網 IP
           </div>
-          <div class="lux-conn-row">
-            <input id="lux-ip"   class="lux-inp" placeholder="192.168.1.xxx" inputmode="decimal">
+          <!-- HTTPS mixed-content warning (shown only when on https://) -->
+          <div id="wifi-https-warn" style="display:none;margin-top:6px;padding:8px 10px;border-radius:8px;border:1px solid #f59e0b;background:#fffbeb;font-size:12px;line-height:1.6">
+            ⚠️ <b>目前頁面為 HTTPS，Chrome 預設封鎖 HTTP 本機請求。</b><br>
+            請依下列步驟允許不安全內容（僅此網站）：<br>
+            <b>① 點網址列左側的鎖頭圖示</b><br>
+            <b>② 網站設定 → 不安全內容 → 允許</b><br>
+            <b>③ 重新整理頁面後再連線</b><br>
+            <div style="margin-top:6px">或 <b>直接下載 HTML 本機開啟</b>（無 HTTPS 限制）：
+              <button onclick="downloadHTML()" style="margin-left:6px;padding:3px 10px;border-radius:6px;border:1px solid var(--c-border);background:var(--c-card);cursor:pointer;font-size:12px">⬇ 下載 HTML</button>
+            </div>
+          </div>
+          <div class="lux-conn-row" style="margin-top:8px">
+            <input id="lux-ip"   class="lux-inp" placeholder="127.0.0.1" inputmode="decimal">
             <input id="lux-port" class="lux-inp lux-inp-sm" value="4444" inputmode="numeric">
             <button id="lux-conn-btn" class="lux-btn" onclick="toggleLux()">連線</button>
           </div>
@@ -1002,8 +1012,21 @@ function switchLuxTab(tab){
   document.getElementById('tab-usb').className='lux-tab'+(tab==='usb'?' lux-tab-active':'');
   document.getElementById('tab-wifi').className='lux-tab'+(tab==='wifi'?' lux-tab-active':'');
   document.getElementById('tab-als').className='lux-tab'+(tab==='als'?' lux-tab-active':'');
-  // stop ALS if switching away
   if(tab!=='als') stopALS();
+  // show HTTPS mixed-content warning when switching to WiFi tab
+  if(tab==='wifi'){
+    const isHttps = location.protocol==='https:';
+    document.getElementById('wifi-https-warn').style.display = isHttps ? '' : 'none';
+  }
+}
+
+function downloadHTML(){
+  const html = document.documentElement.outerHTML;
+  const blob = new Blob(['<!DOCTYPE html>'+html],{type:'text/html'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'fire-checklist.html';
+  a.click();
 }
 
 // ── Built-in phone ALS (AmbientLightSensor API) ─────────────────────────────

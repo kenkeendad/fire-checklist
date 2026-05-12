@@ -1119,15 +1119,33 @@ function printReportToPDF(){
     const bkeys=allKeys.filter(k=>k.startsWith(b.id+'|'));
     if(bkeys.length===0)return;
     html+=`<div class="print-bld-section"><div class="print-bld-title">${b.name}</div>
-      <table class="print-table"><thead><tr><th width="30%">設備類型</th><th width="40%">檢查項目</th><th width="30%">複查狀態</th></tr></thead><tbody>`;
+      <table class="print-table"><thead><tr><th width="28%">設備類型</th><th width="34%">檢查項目</th><th width="20%">量測值</th><th width="18%">複查狀態</th></tr></thead><tbody>`;
     b.cats.forEach((cg,ci)=>{
       const c=CATS[cg.cat];
+      const spec=LUX_SPEC[cg.cat];
       cg.items.forEach((it,ii)=>{
         const k=mkKey(b.id,ci,ii);
         const s=chk[k]||'';
         if(!shouldInclude(k,s))return;
         const cls='print-status-'+(s||'pending');
-        html+=`<tr><td>${c.name}<br><span style="color:#555;font-size:11px">${c.law}</span></td><td>${it.label}</td><td class="${cls}">${STATUS_LABEL[s]}</td></tr>`;
+        let luxCell='—';
+        if(spec){
+          const lv=luxData[k];
+          if(lv!==undefined){
+            if(spec.unit==='cd'){
+              const pass=lv>=spec.min;
+              luxCell=`${lv.toFixed(1)} lux<br><b style="color:${pass?'#3B6D11':'#A32D2D'}">${lv.toFixed(1)} cd ${pass?'✓':'✗'}</b>`;
+            } else {
+              let min=spec.min;
+              if(cg.cat==='illum'&&/B1|B2/i.test(it.label))min=10;
+              const pass=lv>=min;
+              luxCell=`<b style="color:${pass?'#3B6D11':'#A32D2D'}">${lv.toFixed(1)} lux ${pass?'✓':'✗'}</b>`;
+            }
+          } else {
+            luxCell='<span style="color:#aaa">未量測</span>';
+          }
+        }
+        html+=`<tr><td>${c.name}<br><span style="color:#555;font-size:11px">${c.law}</span></td><td>${it.label}</td><td style="font-size:12px;text-align:center">${luxCell}</td><td class="${cls}">${STATUS_LABEL[s]}</td></tr>`;
       });
     });
     // Extinguisher in print
@@ -1168,7 +1186,17 @@ function copyReport(){
         const k=mkKey(b.id,ci,ii);
         const s=chk[k]||'';
         if(!shouldInclude(k,s))return;
-        txt+='  ['+STATUS_LABEL[s]+'] '+it.label+'\n';
+        const spec2=LUX_SPEC[cg.cat];
+        let luxNote='';
+        if(spec2){
+          const lv=luxData[k];
+          if(lv!==undefined){
+            luxNote = spec2.unit==='cd'
+              ? ` 【${lv.toFixed(1)} lux → ${lv.toFixed(1)} cd ${lv>=spec2.min?'✓':'✗'}】`
+              : ` 【${lv.toFixed(1)} lux ${lv>=spec2.min?'✓':'✗'}】`;
+          }
+        }
+        txt+='  ['+STATUS_LABEL[s]+'] '+it.label+luxNote+'\n';
       });
     });
     const extFloors=EXT_FLOORS[b.id]||[];

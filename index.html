@@ -951,19 +951,51 @@ function switchLuxTab(tab){
   document.getElementById('tab-wifi').className='lux-tab'+(tab==='wifi'?' lux-tab-active':'');
 }
 
-// ── WebUSB (Android Chrome / Desktop Chrome) ──────────────────────────────────
-let yapiModule=null, lsModule=null;
+// ── WebUSB — 原生協定實作（不依賴外部函式庫）────────────────────────────────
+// Yoctopuce USB 封包協定：每個封包 64 bytes
+// Byte 0: 封包序號  Byte 1: stream type  Bytes 2-63: payload
+const YSTREAM_TCP = 0, YSTREAM_TCP_CLOSE = 2;
+const USB_PKT = 64, USB_PAY = 62;
+let usbDevice = null, usbPktNo = 0, usbEpIn = 1, usbEpOut = 1;
 
-async function loadYocto(){
-  if(yapiModule)return true;
-  try{
-    yapiModule=await import('https://cdn.jsdelivr.net/npm/yoctolib-esm/src/yocto_api_html.js');
-    lsModule  =await import('https://cdn.jsdelivr.net/npm/yoctolib-esm/src/yocto_lightsensor.js');
-    return true;
-  }catch(e){
-    console.warn('Yocto CDN import failed:',e);
-    return false;
+async function yoctoSend(req){
+  const data = new TextEncoder().encode(req);
+  for(let i=0; i<data.length; i+=USB_PAY){
+    const pkt = new Uint8Array(USB_PKT);
+    pkt[0] = usbPktNo++ & 0xFF;
+    pkt[1] = YSTREAM_TCP;
+    pkt.set(data.slice(i, i+USB_PAY), 2);
+    await usbDevice.transferOut(usbEpOut, pkt);
   }
+  const fin = new Uint8Array(USB_PKT);
+  fin[0] = usbPktNo++ & 0xFF;
+  fin[1] = YSTREAM_TCP_CLOSE;
+  await usbDevice.transferOut(usbEpOut, fin);
+}
+
+async function yoctoRecv(){
+  let body='';
+  const deadline = Date.now()+2500;
+  while(Date.now()<deadline){
+    let r;
+    try{ r = await usbDevice.transferIn(usbEpIn, USB_PKT); }catch(e){ break; }
+    if(!r.data || r.data.byteLength<2) continue;
+    const st = r.data.getUint8(1);
+    if(st===YSTREAM_TCP){
+      const b = new Uint8Array(r.data.buffer, 2);
+      const nul = b.indexOf(0);
+      body += new TextDecoder().decode(b.slice(0, nul<0 ? b.length : nul));
+    } else if(st===YSTREAM_TCP_CLOSE) break;
+  }
+  return body;
+}
+
+async function yoctoGetLux(){
+  await yoctoSend('GET /api/lightSensor/currentValue.txt HTTP/1.1\r\nConnection:close\r\n\r\n');
+  const resp = await yoctoRecv();
+  const body = (resp.split('\r\n\r\n')[1]||resp).trim();
+  const v = parseFloat(body);
+  return isNaN(v) ? null : v;
 }
 
 async function connectWebUSB(){
@@ -971,67 +1003,68 @@ async function connectWebUSB(){
     setLuxStatus('⚠️ 此瀏覽器不支援 WebUSB，請使用 Chrome','lux-st-err');
     return;
   }
+  // Disconnect
   if(luxConnected){
-    clearInterval(luxInterval);luxInterval=null;luxConnected=false;
+    clearInterval(luxInterval); luxInterval=null; luxConnected=false;
+    try{ await usbDevice.releaseInterface(0); await usbDevice.close(); }catch(e){}
+    usbDevice=null;
     document.getElementById('lux-conn-btn-usb').textContent='USB 授權連線';
     setLuxStatus('已中斷 USB','');
     return;
   }
-  setLuxStatus('載入 Yoctopuce 函式庫…','');
-  const ok=await loadYocto();
-  if(!ok){
-    // Fallback: manual WebUSB without library
-    await connectWebUSBManual();
-    return;
-  }
   try{
-    const {YAPI,YErrorMsg}=yapiModule;
-    const {YLightSensor}=lsModule;
-    setLuxStatus('等待 USB 裝置授權視窗…','');
-    const errmsg=new YErrorMsg();
-    if(await YAPI.RegisterHub('usb',errmsg)!==YAPI.SUCCESS){
-      setLuxStatus('⚠️ USB 連線失敗：'+errmsg.msg,'lux-st-err');return;
+    setLuxStatus('尋找已授權裝置…','');
+    // Try already-authorized device first
+    const existing = await navigator.usb.getDevices();
+    let device = existing.find(d=>d.vendorId===0x24E0);
+    if(!device){
+      setLuxStatus('等待裝置授權視窗…','');
+      device = await navigator.usb.requestDevice({filters:[{vendorId:0x24E0}]});
     }
-    if(await YAPI.UpdateDeviceList(errmsg)!==YAPI.SUCCESS){
-      setLuxStatus('⚠️ 裝置更新失敗：'+errmsg.msg,'lux-st-err');return;
-    }
-    const sensor=YLightSensor.FirstLightSensor();
-    if(!sensor){
-      setLuxStatus('⚠️ 找不到光感測器，請確認插入 Yocto-Light-V4','lux-st-err');return;
+    usbDevice = device;
+    setLuxStatus('正在開啟 '+device.productName+'…','');
+    await device.open();
+    if(!device.configuration) await device.selectConfiguration(1);
+    try{ await device.claimInterface(0); }catch(e){}
+    // Discover endpoints
+    try{
+      const alt = device.configuration.interfaces[0].alternates[0];
+      for(const ep of alt.endpoints){
+        if(ep.direction==='in') usbEpIn=ep.endpointNumber;
+        else usbEpOut=ep.endpointNumber;
+      }
+    }catch(e){ usbEpIn=1; usbEpOut=1; }
+    usbPktNo=0;
+    setLuxStatus('測試讀值中…','');
+    const lux = await yoctoGetLux();
+    if(lux===null){
+      setLuxStatus('⚠️ 無法讀取數值，確認感測器已插好並重試','lux-st-err');
+      try{ await device.close(); }catch(e){}
+      return;
     }
     luxConnected=true;
-    setLuxStatus('✓ USB 直連成功（每秒更新）','lux-st-ok');
     document.getElementById('lux-conn-btn-usb').textContent='中斷 USB';
-    async function pollUSB(){
+    setLuxStatus('✓ USB 直連成功 — '+device.productName,'lux-st-ok');
+    updateLuxDisplay(lux);
+    luxInterval=setInterval(async()=>{
       try{
-        await YAPI.UpdateDeviceList();
-        const lux=await sensor.get_currentValue();
-        if(lux!==YLightSensor.CURRENTVALUE_INVALID)updateLuxDisplay(lux);
-      }catch(e){
-        clearInterval(luxInterval);luxInterval=null;luxConnected=false;
-        setLuxStatus('⚠️ USB 連線中斷','lux-st-err');
-        document.getElementById('lux-conn-btn-usb').textContent='USB 授權連線';
-      }
-    }
-    await pollUSB();
-    luxInterval=setInterval(pollUSB,1000);
+        const v=await yoctoGetLux();
+        if(v!==null) updateLuxDisplay(v);
+        else usbError('讀取失敗');
+      }catch(e){ usbError(e.message); }
+    },1000);
   }catch(e){
-    setLuxStatus('⚠️ WebUSB 錯誤：'+e.message,'lux-st-err');
+    if(e.name==='NotFoundError') setLuxStatus('未選擇裝置','');
+    else setLuxStatus('⚠️ '+e.message,'lux-st-err');
   }
 }
 
-// Fallback: direct WebUSB without library (basic ping to check USB permission)
-async function connectWebUSBManual(){
-  try{
-    // Yoctopuce vendor ID = 0x24E0
-    const device=await navigator.usb.requestDevice({filters:[{vendorId:0x24E0}]});
-    await device.open();
-    setLuxStatus('✓ USB 裝置已授權（'+device.productName+'）。函式庫載入失敗，請確認網路連線後重試。','lux-st-err');
-    await device.close();
-  }catch(e){
-    if(e.name==='NotFoundError')setLuxStatus('未選擇裝置','');
-    else setLuxStatus('⚠️ '+e.message,'lux-st-err');
-  }
+function usbError(msg){
+  clearInterval(luxInterval); luxInterval=null; luxConnected=false;
+  document.getElementById('lux-conn-btn-usb').textContent='USB 授權連線';
+  setLuxStatus('⚠️ USB 中斷：'+msg,'lux-st-err');
+  try{ usbDevice.close(); }catch(e){}
+  usbDevice=null;
 }
 
 function openLux(){

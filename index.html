@@ -1205,8 +1205,19 @@ async function connectWebUSB(){
       }catch(e){ usbError(e.message); }
     },1000);
   }catch(e){
-    if(e.name==='NotFoundError') setLuxStatus('未選擇裝置','');
-    else setLuxStatus('⚠️ '+e.message,'lux-st-err');
+    if(e.name==='NotFoundError'){
+      setLuxStatus('未選擇裝置','');
+    } else if(e.message && e.message.toLowerCase().includes('access denied')){
+      setLuxStatus('','lux-st-err');
+      document.getElementById('lux-status').innerHTML =
+        '⚠️ <b>Access denied — 裝置被系統驅動佔用（Windows 常見）</b><br>' +
+        '解決方式（擇一）：<br>' +
+        '① 先關閉 <b>VirtualHub</b> 程式，再重試<br>' +
+        '② 改用 <b>📡 WiFi VirtualHub</b> tab（在同一台電腦跑 VirtualHub，用 127.0.0.1:4444）<br>' +
+        '③ 換 WinUSB 驅動：下載 <a href="https://zadig.akeo.ie/" target="_blank" style="color:var(--c-blue)">Zadig</a>，選 LIGHTMK4 → WinUSB → Install，再重試';
+    } else {
+      setLuxStatus('⚠️ '+e.message,'lux-st-err');
+    }
     if(usbDevice){ try{await usbDevice.close();}catch(err){} usbDevice=null; }
     usbClaimedIface=-1;
   }

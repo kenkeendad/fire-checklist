@@ -304,6 +304,7 @@ body{background:var(--c-bg3);color:var(--c-text);font-family:-apple-system,Blink
         <div style="display:flex;gap:0;margin-bottom:12px;border-radius:8px;overflow:hidden;border:1px solid var(--c-border)">
           <button id="tab-usb" class="lux-tab lux-tab-active" onclick="switchLuxTab('usb')">🤖 Android USB 直連</button>
           <button id="tab-wifi" class="lux-tab" onclick="switchLuxTab('wifi')">📡 WiFi VirtualHub</button>
+          <button id="tab-als" class="lux-tab" onclick="switchLuxTab('als')">📱 手機感光</button>
         </div>
 
         <!-- Android WebUSB tab -->
@@ -334,6 +335,22 @@ body{background:var(--c-bg3);color:var(--c-text);font-family:-apple-system,Blink
             <input id="lux-port" class="lux-inp lux-inp-sm" value="4444" inputmode="numeric">
             <button id="lux-conn-btn" class="lux-btn" onclick="toggleLux()">連線</button>
           </div>
+        </div>
+
+        <!-- Built-in phone ALS tab -->
+        <div id="lux-tab-als" style="display:none">
+          <div class="lux-tip" style="border-color:#f59e0b;background:#fffbeb">
+            ⚠️ <b>僅供初步掃描參考，非校正儀器，不得作為正式驗收依據。</b><br>
+            手機內建感光器（ALS）精度依機型而異；Pixel 7 通常可正常讀取。
+          </div>
+          <div class="lux-tip" style="margin-top:6px">
+            <b>使用方式：</b><br>
+            1. 需使用 <b>Chrome / Edge</b>（Firefox 不支援）<br>
+            2. 將手機平放或對準受測面<br>
+            3. 點「啟動手機感光」後瀏覽器會詢問感應器權限，點允許
+          </div>
+          <button id="als-btn" class="lux-btn" style="width:100%;justify-content:center;margin-top:8px" onclick="toggleALS()">啟動手機感光</button>
+          <div id="als-status" class="lux-status" style="margin-top:8px">未啟動</div>
         </div>
 
         <div id="lux-status" class="lux-status" style="margin-top:8px">未連線</div>
@@ -968,8 +985,53 @@ function switchLuxTab(tab){
   luxMode=tab;
   document.getElementById('lux-tab-usb').style.display=tab==='usb'?'':'none';
   document.getElementById('lux-tab-wifi').style.display=tab==='wifi'?'':'none';
+  document.getElementById('lux-tab-als').style.display=tab==='als'?'':'none';
   document.getElementById('tab-usb').className='lux-tab'+(tab==='usb'?' lux-tab-active':'');
   document.getElementById('tab-wifi').className='lux-tab'+(tab==='wifi'?' lux-tab-active':'');
+  document.getElementById('tab-als').className='lux-tab'+(tab==='als'?' lux-tab-active':'');
+  // stop ALS if switching away
+  if(tab!=='als') stopALS();
+}
+
+// ── Built-in phone ALS (AmbientLightSensor API) ─────────────────────────────
+let alsSensor = null;
+function toggleALS(){
+  if(alsSensor){ stopALS(); return; }
+  if(!('AmbientLightSensor' in window)){
+    document.getElementById('als-status').textContent='⚠️ 此瀏覽器不支援 AmbientLightSensor（請用 Chrome / Edge，並確認已開啟「Generic Sensor」）';
+    document.getElementById('als-status').className='lux-status lux-st-err';
+    return;
+  }
+  try{
+    alsSensor = new AmbientLightSensor({frequency:2});
+    alsSensor.addEventListener('reading', ()=>{
+      const lux = alsSensor.illuminance;
+      updateLuxDisplay(lux);
+      // mirror status into the shared lux-status bar
+      document.getElementById('lux-status').textContent='📱 手機感光：'+lux.toFixed(1)+' lux（僅供參考）';
+      document.getElementById('lux-status').className='lux-status lux-st-ok';
+    });
+    alsSensor.addEventListener('error', e=>{
+      document.getElementById('als-status').textContent='⚠️ '+e.error.message;
+      document.getElementById('als-status').className='lux-status lux-st-err';
+      stopALS();
+    });
+    alsSensor.start();
+    document.getElementById('als-btn').textContent='停止感光';
+    document.getElementById('als-status').textContent='🟢 感光中…（請將手機對準受測面）';
+    document.getElementById('als-status').className='lux-status lux-st-ok';
+  }catch(e){
+    document.getElementById('als-status').textContent='⚠️ 啟動失敗：'+e.message;
+    document.getElementById('als-status').className='lux-status lux-st-err';
+    alsSensor=null;
+  }
+}
+function stopALS(){
+  if(alsSensor){ try{alsSensor.stop();}catch(e){} alsSensor=null; }
+  const btn=document.getElementById('als-btn');
+  if(btn) btn.textContent='啟動手機感光';
+  const st=document.getElementById('als-status');
+  if(st){ st.textContent='已停止'; st.className='lux-status'; }
 }
 
 // ── WebUSB — 原生協定實作（不依賴外部函式庫）────────────────────────────────
@@ -1137,6 +1199,8 @@ function openLux(){
 function closeLux(){
   document.getElementById('lux-bg').className='modal-bg';
   // keep polling alive so user can close modal and reopen
+  // ALS: stop when closing (browser keeps permission; user must restart)
+  stopALS();
 }
 function luxBgClick(e){ if(e.target===document.getElementById('lux-bg'))closeLux(); }
 

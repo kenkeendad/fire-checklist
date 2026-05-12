@@ -214,6 +214,8 @@ body{background:var(--c-bg3);color:var(--c-text);font-family:-apple-system,Blink
 /* Note & log */
 .lux-note{width:100%;font-size:13px;border:1px solid var(--c-border2);border-radius:6px;padding:8px 9px;background:var(--c-bg);color:var(--c-text);resize:vertical;min-height:48px;outline:none;box-sizing:border-box}
 .lux-save-btn{width:100%;margin-top:8px;font-size:13px;font-weight:600;padding:10px;border-radius:7px;border:none;cursor:pointer;background:var(--c-blue);color:#fff;-webkit-tap-highlight-color:transparent}
+.lux-tab{flex:1;font-size:12px;font-weight:600;padding:8px 4px;border:none;cursor:pointer;background:var(--c-bg2);color:var(--c-text2);-webkit-tap-highlight-color:transparent}
+.lux-tab-active{background:var(--c-teal);color:#fff}
 .lux-log-item{border-radius:7px;padding:8px 10px;margin-top:6px;border-left:3px solid transparent}
 .lux-log-ok  {background:var(--c-grn-bg);border-left-color:var(--c-grn)}
 .lux-log-fail{background:var(--c-red-bg);border-left-color:var(--c-red)}
@@ -283,22 +285,44 @@ body{background:var(--c-bg3);color:var(--c-text);font-family:-apple-system,Blink
     </div>
     <div class="lux-body-inner">
 
-      <!-- Connection -->
+      <!-- Connection tabs -->
       <div class="lux-sec">
-        <div class="lux-sec-title">VirtualHub 連線設定</div>
-        <div class="lux-tip">
-          ⚠️ iPad / iPhone 使用步驟：<br>
-          1. 將 Yocto-Light-V4 接上 Mac 或 PC（USB-C Hub → USB-A → Micro-B）<br>
-          2. 電腦下載並執行 <b>VirtualHub</b>（yoctopuce.com）<br>
-          3. 此頁面需從 <b>http://</b>（非 https）開啟，或直接下載本檔案在本機開啟<br>
-          4. 填入電腦的區網 IP，點「連線」
+        <div style="display:flex;gap:0;margin-bottom:12px;border-radius:8px;overflow:hidden;border:1px solid var(--c-border)">
+          <button id="tab-usb" class="lux-tab lux-tab-active" onclick="switchLuxTab('usb')">🤖 Android USB 直連</button>
+          <button id="tab-wifi" class="lux-tab" onclick="switchLuxTab('wifi')">📡 WiFi VirtualHub</button>
         </div>
-        <div class="lux-conn-row">
-          <input id="lux-ip"   class="lux-inp" placeholder="192.168.1.xxx" inputmode="decimal">
-          <input id="lux-port" class="lux-inp lux-inp-sm" value="4444" inputmode="numeric">
-          <button id="lux-conn-btn" class="lux-btn" onclick="toggleLux()">連線</button>
+
+        <!-- Android WebUSB tab -->
+        <div id="lux-tab-usb">
+          <div class="lux-tip">
+            <b>Android Chrome (Pixel 7 等) 直連方式：</b><br>
+            1. 準備 <b>USB-C OTG 轉接頭</b>（USB-C 公 → USB-A 母）<br>
+            2. 接上 <b>Micro-B 線</b>，插入 Yocto-Light-V4<br>
+            3. 插入 Pixel 7 後點「USB 授權連線」，Chrome 會跳出裝置授權視窗<br>
+            4. 選擇 <b>LIGHTMK4</b> 裝置後即自動開始讀值<br>
+            <span style="color:var(--c-text3)">⚠️ 需使用 Chrome（不支援 Safari / Firefox）</span>
+          </div>
+          <div id="webusb-support" class="lux-status" style="margin-bottom:8px"></div>
+          <button id="lux-conn-btn-usb" class="lux-btn" style="width:100%;justify-content:center" onclick="connectWebUSB()">USB 授權連線</button>
         </div>
-        <div id="lux-status" class="lux-status">未連線</div>
+
+        <!-- VirtualHub WiFi tab -->
+        <div id="lux-tab-wifi" style="display:none">
+          <div class="lux-tip">
+            <b>iPad / iPhone / 任何裝置（WiFi 方式）：</b><br>
+            1. 將感測器接上 <b>Mac 或 PC</b>（USB-C Hub → Micro-B）<br>
+            2. 電腦執行 <a href="https://www.yoctopuce.com/EN/virtualhub.php" style="color:var(--c-blue)">VirtualHub</a>（免費下載）<br>
+            3. 此頁面須用 <b>http://</b> 開啟，或下載 HTML 本機開啟<br>
+            4. 輸入電腦區網 IP → 點「連線」
+          </div>
+          <div class="lux-conn-row">
+            <input id="lux-ip"   class="lux-inp" placeholder="192.168.1.xxx" inputmode="decimal">
+            <input id="lux-port" class="lux-inp lux-inp-sm" value="4444" inputmode="numeric">
+            <button id="lux-conn-btn" class="lux-btn" onclick="toggleLux()">連線</button>
+          </div>
+        </div>
+
+        <div id="lux-status" class="lux-status" style="margin-top:8px">未連線</div>
       </div>
 
       <!-- Live reading -->
@@ -917,8 +941,113 @@ function confirmReset(){
 
 // ── Lux meter ────────────────────────────────────────────────────────────────
 let luxConnected=false, luxInterval=null, lastLux=null, luxReadings=[];
+let luxMode='usb'; // 'usb' | 'wifi'
 
-function openLux(){ document.getElementById('lux-bg').className='modal-bg show'; }
+function switchLuxTab(tab){
+  luxMode=tab;
+  document.getElementById('lux-tab-usb').style.display=tab==='usb'?'':'none';
+  document.getElementById('lux-tab-wifi').style.display=tab==='wifi'?'':'none';
+  document.getElementById('tab-usb').className='lux-tab'+(tab==='usb'?' lux-tab-active':'');
+  document.getElementById('tab-wifi').className='lux-tab'+(tab==='wifi'?' lux-tab-active':'');
+}
+
+// ── WebUSB (Android Chrome / Desktop Chrome) ──────────────────────────────────
+let yapiModule=null, lsModule=null;
+
+async function loadYocto(){
+  if(yapiModule)return true;
+  try{
+    yapiModule=await import('https://cdn.jsdelivr.net/npm/yoctolib-esm/src/yocto_api_html.js');
+    lsModule  =await import('https://cdn.jsdelivr.net/npm/yoctolib-esm/src/yocto_lightsensor.js');
+    return true;
+  }catch(e){
+    console.warn('Yocto CDN import failed:',e);
+    return false;
+  }
+}
+
+async function connectWebUSB(){
+  if(!('usb' in navigator)){
+    setLuxStatus('⚠️ 此瀏覽器不支援 WebUSB，請使用 Chrome','lux-st-err');
+    return;
+  }
+  if(luxConnected){
+    clearInterval(luxInterval);luxInterval=null;luxConnected=false;
+    document.getElementById('lux-conn-btn-usb').textContent='USB 授權連線';
+    setLuxStatus('已中斷 USB','');
+    return;
+  }
+  setLuxStatus('載入 Yoctopuce 函式庫…','');
+  const ok=await loadYocto();
+  if(!ok){
+    // Fallback: manual WebUSB without library
+    await connectWebUSBManual();
+    return;
+  }
+  try{
+    const {YAPI,YErrorMsg}=yapiModule;
+    const {YLightSensor}=lsModule;
+    setLuxStatus('等待 USB 裝置授權視窗…','');
+    const errmsg=new YErrorMsg();
+    if(await YAPI.RegisterHub('usb',errmsg)!==YAPI.SUCCESS){
+      setLuxStatus('⚠️ USB 連線失敗：'+errmsg.msg,'lux-st-err');return;
+    }
+    if(await YAPI.UpdateDeviceList(errmsg)!==YAPI.SUCCESS){
+      setLuxStatus('⚠️ 裝置更新失敗：'+errmsg.msg,'lux-st-err');return;
+    }
+    const sensor=YLightSensor.FirstLightSensor();
+    if(!sensor){
+      setLuxStatus('⚠️ 找不到光感測器，請確認插入 Yocto-Light-V4','lux-st-err');return;
+    }
+    luxConnected=true;
+    setLuxStatus('✓ USB 直連成功（每秒更新）','lux-st-ok');
+    document.getElementById('lux-conn-btn-usb').textContent='中斷 USB';
+    async function pollUSB(){
+      try{
+        await YAPI.UpdateDeviceList();
+        const lux=await sensor.get_currentValue();
+        if(lux!==YLightSensor.CURRENTVALUE_INVALID)updateLuxDisplay(lux);
+      }catch(e){
+        clearInterval(luxInterval);luxInterval=null;luxConnected=false;
+        setLuxStatus('⚠️ USB 連線中斷','lux-st-err');
+        document.getElementById('lux-conn-btn-usb').textContent='USB 授權連線';
+      }
+    }
+    await pollUSB();
+    luxInterval=setInterval(pollUSB,1000);
+  }catch(e){
+    setLuxStatus('⚠️ WebUSB 錯誤：'+e.message,'lux-st-err');
+  }
+}
+
+// Fallback: direct WebUSB without library (basic ping to check USB permission)
+async function connectWebUSBManual(){
+  try{
+    // Yoctopuce vendor ID = 0x24E0
+    const device=await navigator.usb.requestDevice({filters:[{vendorId:0x24E0}]});
+    await device.open();
+    setLuxStatus('✓ USB 裝置已授權（'+device.productName+'）。函式庫載入失敗，請確認網路連線後重試。','lux-st-err');
+    await device.close();
+  }catch(e){
+    if(e.name==='NotFoundError')setLuxStatus('未選擇裝置','');
+    else setLuxStatus('⚠️ '+e.message,'lux-st-err');
+  }
+}
+
+function openLux(){
+  document.getElementById('lux-bg').className='modal-bg show';
+  // Check WebUSB support and show banner
+  const wsEl=document.getElementById('webusb-support');
+  if(!wsEl)return;
+  if('usb' in navigator){
+    wsEl.textContent='✓ 此瀏覽器支援 WebUSB（Chrome），可直接 USB 連線';
+    wsEl.className='lux-status lux-st-ok';
+  }else{
+    wsEl.textContent='⚠️ 此瀏覽器不支援 WebUSB。請切換至「WiFi VirtualHub」分頁，或改用 Chrome';
+    wsEl.className='lux-status lux-st-err';
+    switchLuxTab('wifi'); // auto switch to wifi tab
+  }
+}
 function closeLux(){
   document.getElementById('lux-bg').className='modal-bg';
   // keep polling alive so user can close modal and reopen

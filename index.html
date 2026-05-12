@@ -977,7 +977,7 @@ function switchLuxTab(tab){
 // Byte 0: 封包序號  Byte 1: stream type  Bytes 2-63: payload
 const YSTREAM_TCP = 0, YSTREAM_TCP_CLOSE = 2;
 const USB_PKT = 64, USB_PAY = 62;
-let usbDevice = null, usbPktNo = 0, usbEpIn = 1, usbEpOut = 1;
+let usbDevice = null, usbPktNo = 0, usbEpIn = 1, usbEpOut = 1, usbClaimedIface = -1;
 
 async function yoctoSend(req){
   const data = new TextEncoder().encode(req);
@@ -1036,45 +1036,43 @@ async function connectWebUSB(){
   // Disconnect
   if(luxConnected){
     clearInterval(luxInterval); luxInterval=null; luxConnected=false;
-    try{ await usbDevice.releaseInterface(0); await usbDevice.close(); }catch(e){}
-    usbDevice=null;
+    const releaseN = usbClaimedIface >= 0 ? usbClaimedIface : 0;
+    try{ await usbDevice.releaseInterface(releaseN); }catch(e){}
+    try{ await usbDevice.close(); }catch(e){}
+    usbDevice=null; usbClaimedIface=-1;
     document.getElementById('lux-conn-btn-usb').textContent='USB 授權連線';
     setLuxStatus('已中斷 USB','');
     return;
   }
   try{
-    setLuxStatus('尋找已授權裝置…','');
-    // ① 尋找已授權裝置
-    setLuxStatus('① 尋找已授權裝置…','');
-    const existing = await navigator.usb.getDevices();
-    let device = existing.find(d=>d.vendorId===0x24E0);
-    if(!device){
-      setLuxStatus('② 等待 Chrome 授權視窗（選擇 LIGHTMK4）…','');
-      device = await navigator.usb.requestDevice({filters:[{vendorId:0x24E0}]});
-    }
+    // ① 每次都走 requestDevice，讓 Chrome 管理裝置狀態
+    // （已授權裝置會出現在清單頂端，直接點選即可）
+    setLuxStatus('① 等待 Chrome USB 選擇視窗… 請在列表中點選 LIGHTMK4','');
+    const device = await navigator.usb.requestDevice({filters:[{vendorId:0x24E0}]});
     usbDevice = device;
 
     // ② 開啟裝置
     setLuxStatus('② 開啟裝置 '+device.productName+'…','');
-    if(device.opened){ try{await device.close();}catch(e){} }
-    await device.open();
-    if(!device.configuration) await device.selectConfiguration(1);
+    if(!device.opened) await device.open();
+    if(!device.configuration){
+      try{ await device.selectConfiguration(1); }catch(e){}
+    }
 
     // ③ 申請介面（嘗試 0 → 1 → 2）
-    let claimedIface = -1;
+    usbClaimedIface = -1;
     for(const n of [0,1,2]){
-      try{ await device.claimInterface(n); claimedIface=n; break; }
+      try{ await device.claimInterface(n); usbClaimedIface=n; break; }
       catch(e){ /* try next */ }
     }
-    if(claimedIface<0){
-      setLuxStatus('⚠️ 無法申請 USB 介面。請確認：1) 已拔掉再重插 OTG 轉接頭 2) Android 系統「允許 USB 存取」視窗點了允許','lux-st-err');
+    if(usbClaimedIface < 0){
+      setLuxStatus('⚠️ 無法申請 USB 介面。請：① 拔掉重插 OTG 線 → ② 重新整理此頁 → ③ 再次點擊連線','lux-st-err');
       try{await device.close();}catch(e){} usbDevice=null; return;
     }
 
     // ④ 探索 bulk endpoint
     usbEpIn=1; usbEpOut=1;
     try{
-      const alt=device.configuration.interfaces[claimedIface].alternates[0];
+      const alt=device.configuration.interfaces[usbClaimedIface].alternates[0];
       for(const ep of alt.endpoints){
         if(ep.type==='bulk'){
           if(ep.direction==='in') usbEpIn=ep.endpointNumber;
@@ -1084,18 +1082,18 @@ async function connectWebUSB(){
     }catch(e){}
     usbPktNo=0;
 
-    // ⑤ 測試讀值
-    setLuxStatus('③ 通訊測試（介面'+claimedIface+'，EP IN:'+usbEpIn+' OUT:'+usbEpOut+'）…','');
+    // ⑤ 通訊測試
+    setLuxStatus('③ 通訊測試（介面'+usbClaimedIface+'，EP IN:'+usbEpIn+' OUT:'+usbEpOut+'）…','');
     const lux = await yoctoGetLux();
     if(lux===null){
-      setLuxStatus('⚠️ 通訊失敗（介面'+claimedIface+'，EP IN:'+usbEpIn+'）。可能原因：OTG轉接頭無法供電、裝置需外部電源、或韌體版本不符','lux-st-err');
-      try{await device.releaseInterface(claimedIface);}catch(e){}
-      try{await device.close();}catch(e){} usbDevice=null; return;
+      setLuxStatus('⚠️ 通訊失敗（裝置有回應但讀不到數值）。請確認感測器有接好，再試一次','lux-st-err');
+      try{await device.releaseInterface(usbClaimedIface);}catch(e){}
+      try{await device.close();}catch(e){} usbDevice=null; usbClaimedIface=-1; return;
     }
 
     luxConnected=true;
     document.getElementById('lux-conn-btn-usb').textContent='中斷 USB';
-    setLuxStatus('✓ USB 直連成功 — '+device.productName+' (介面'+claimedIface+')','lux-st-ok');
+    setLuxStatus('✓ USB 直連成功 — '+device.productName+' (介面'+usbClaimedIface+')','lux-st-ok');
     updateLuxDisplay(lux);
     luxInterval=setInterval(async()=>{
       try{
@@ -1108,6 +1106,7 @@ async function connectWebUSB(){
     if(e.name==='NotFoundError') setLuxStatus('未選擇裝置','');
     else setLuxStatus('⚠️ '+e.message,'lux-st-err');
     if(usbDevice){ try{await usbDevice.close();}catch(err){} usbDevice=null; }
+    usbClaimedIface=-1;
   }
 }
 
@@ -1115,9 +1114,10 @@ function usbError(msg){
   clearInterval(luxInterval); luxInterval=null; luxConnected=false;
   document.getElementById('lux-conn-btn-usb').textContent='USB 授權連線';
   setLuxStatus('⚠️ USB 中斷：'+msg,'lux-st-err');
-  try{ usbDevice.releaseInterface(0); }catch(e){}
+  const releaseN = usbClaimedIface >= 0 ? usbClaimedIface : 0;
+  try{ usbDevice.releaseInterface(releaseN); }catch(e){}
   try{ usbDevice.close(); }catch(e){}
-  usbDevice=null;
+  usbDevice=null; usbClaimedIface=-1;
 }
 
 function openLux(){

@@ -180,6 +180,47 @@ body{background:var(--c-bg3);color:var(--c-text);font-family:-apple-system,Blink
 .ri-x{background:none;border:none;color:var(--c-border2);font-size:13px;cursor:pointer;padding:0 2px 0 6px;margin-left:auto;flex-shrink:0;line-height:1;-webkit-tap-highlight-color:transparent}
 .ri-x:hover,.ri-x:active{color:var(--c-red)}
 
+/* ── Lux meter ── */
+.fab3{position:fixed;bottom:68px;right:16px;background:var(--c-teal);color:#fff;border:none;border-radius:50px;padding:10px 16px;font-size:13px;font-weight:600;cursor:pointer;z-index:200;box-shadow:0 4px 16px rgba(0,0,0,.2);-webkit-tap-highlight-color:transparent}
+.fab3:active{transform:scale(.96)}
+.lux-modal{background:var(--c-bg);border-radius:16px;max-width:520px;margin:0 auto;overflow:hidden}
+.lux-body-inner{padding:16px;max-height:70vh;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.lux-sec{margin-bottom:16px}
+.lux-sec-title{font-size:11px;font-weight:700;color:var(--c-text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+.lux-conn-row{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.lux-inp{font-size:13px;border:1px solid var(--c-border2);border-radius:6px;padding:7px 9px;background:var(--c-bg);color:var(--c-text);flex:1;min-width:0;outline:none}
+.lux-inp:focus{border-color:var(--c-teal)}
+.lux-inp-sm{flex:0 0 68px;width:68px}
+.lux-btn{font-size:13px;font-weight:600;padding:7px 14px;border-radius:6px;border:none;cursor:pointer;background:var(--c-teal);color:#fff;white-space:nowrap;-webkit-tap-highlight-color:transparent}
+.lux-btn:active{filter:brightness(.9)}
+.lux-status{font-size:11px;margin-top:6px;padding:5px 9px;border-radius:5px;background:var(--c-bg3);color:var(--c-text3)}
+.lux-st-ok {background:var(--c-grn-bg);color:var(--c-grn)}
+.lux-st-err{background:var(--c-red-bg);color:var(--c-red)}
+.lux-tip{font-size:11px;color:var(--c-text3);line-height:1.5;margin-bottom:8px;background:var(--c-amber-bg);border-radius:6px;padding:6px 9px}
+/* Big reading display */
+.lux-display{text-align:center;padding:20px 0 14px;background:var(--c-bg2);border-radius:10px;margin-bottom:14px;position:relative}
+.lux-big{font-size:52px;font-weight:700;color:var(--c-teal);line-height:1;font-variant-numeric:tabular-nums}
+.lux-unit-lbl{font-size:13px;color:var(--c-text2);margin-top:4px;font-weight:500}
+.lux-bar-wrap{height:6px;background:var(--c-border);border-radius:3px;margin:10px 20px 0;overflow:hidden}
+.lux-bar{height:100%;border-radius:3px;background:var(--c-teal);width:0%;transition:width .4s}
+/* Conversion */
+.lux-sel{width:100%;font-size:13px;border:1px solid var(--c-border2);border-radius:6px;padding:7px 9px;background:var(--c-bg);color:var(--c-text);outline:none;margin-bottom:8px}
+.lux-dist-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:13px}
+.lux-result{border-radius:8px;padding:12px 14px;text-align:center;background:var(--c-bg2)}
+.lux-cd-num{font-size:28px;font-weight:700;color:var(--c-text);line-height:1}
+.lux-pass{font-size:12px;margin-top:4px;font-weight:600}
+.lux-pass-ok  {color:var(--c-grn)}
+.lux-pass-fail{color:var(--c-red)}
+/* Note & log */
+.lux-note{width:100%;font-size:13px;border:1px solid var(--c-border2);border-radius:6px;padding:8px 9px;background:var(--c-bg);color:var(--c-text);resize:vertical;min-height:48px;outline:none;box-sizing:border-box}
+.lux-save-btn{width:100%;margin-top:8px;font-size:13px;font-weight:600;padding:10px;border-radius:7px;border:none;cursor:pointer;background:var(--c-blue);color:#fff;-webkit-tap-highlight-color:transparent}
+.lux-log-item{border-radius:7px;padding:8px 10px;margin-top:6px;border-left:3px solid transparent}
+.lux-log-ok  {background:var(--c-grn-bg);border-left-color:var(--c-grn)}
+.lux-log-fail{background:var(--c-red-bg);border-left-color:var(--c-red)}
+.lux-log-ts  {font-size:10px;color:var(--c-text3)}
+.lux-log-note{font-size:12px;font-weight:600;color:var(--c-text);margin:2px 0}
+.lux-log-res {font-size:11px;color:var(--c-text2)}
+
 /* ── Print ── */
 #print-area{display:none}
 @media print{
@@ -233,8 +274,78 @@ body{background:var(--c-bg3);color:var(--c-text);font-family:-apple-system,Blink
 <div class="content" id="content"></div>
 <div id="print-area"></div>
 
+<!-- ── Lux meter modal ── -->
+<div class="modal-bg" id="lux-bg" onclick="luxBgClick(event)">
+  <div class="lux-modal">
+    <div class="modal-hd">
+      <div class="modal-title">🔆 光照度量測（Yocto-Light-V4）</div>
+      <button class="modal-close" onclick="closeLux()">✕</button>
+    </div>
+    <div class="lux-body-inner">
+
+      <!-- Connection -->
+      <div class="lux-sec">
+        <div class="lux-sec-title">VirtualHub 連線設定</div>
+        <div class="lux-tip">
+          ⚠️ iPad / iPhone 使用步驟：<br>
+          1. 將 Yocto-Light-V4 接上 Mac 或 PC（USB-C Hub → USB-A → Micro-B）<br>
+          2. 電腦下載並執行 <b>VirtualHub</b>（yoctopuce.com）<br>
+          3. 此頁面需從 <b>http://</b>（非 https）開啟，或直接下載本檔案在本機開啟<br>
+          4. 填入電腦的區網 IP，點「連線」
+        </div>
+        <div class="lux-conn-row">
+          <input id="lux-ip"   class="lux-inp" placeholder="192.168.1.xxx" inputmode="decimal">
+          <input id="lux-port" class="lux-inp lux-inp-sm" value="4444" inputmode="numeric">
+          <button id="lux-conn-btn" class="lux-btn" onclick="toggleLux()">連線</button>
+        </div>
+        <div id="lux-status" class="lux-status">未連線</div>
+      </div>
+
+      <!-- Live reading -->
+      <div class="lux-display">
+        <div class="lux-big" id="lux-big">—</div>
+        <div class="lux-unit-lbl" id="lux-unit-lbl">lux</div>
+        <div class="lux-bar-wrap"><div class="lux-bar" id="lux-bar"></div></div>
+      </div>
+
+      <!-- Conversion -->
+      <div class="lux-sec">
+        <div class="lux-sec-title">法規換算</div>
+        <select id="lux-type" class="lux-sel" onchange="calcCd()">
+          <option value="exit">出口標示燈　法規 ≥ 20 cd</option>
+          <option value="sign">避難方向燈　法規 ≥ 25 cd</option>
+          <option value="illum">緊急照明燈　法規 ≥ 2 lux（地面）</option>
+          <option value="stair">樓層燈　法規 ≥ 1 lux（梯面）</option>
+          <option value="ug">地下室方向燈　法規 ≥ 25 cd</option>
+        </select>
+        <div class="lux-dist-row" id="lux-dist-row">
+          <span>量測距離</span>
+          <input id="lux-dist" class="lux-inp lux-inp-sm" type="number" value="1.0" min="0.1" step="0.1" inputmode="decimal" oninput="calcCd()">
+          <span>m　（cd = lux × m²）</span>
+        </div>
+        <div class="lux-result">
+          <div class="lux-cd-num" id="lux-cd">—</div>
+          <div id="lux-pass" class="lux-pass" style="color:var(--c-text3)">等待讀值…</div>
+        </div>
+      </div>
+
+      <!-- Record -->
+      <div class="lux-sec">
+        <div class="lux-sec-title">記錄本次量測</div>
+        <input id="lux-note" class="lux-inp" placeholder="位置說明，例：A棟14F出口燈">
+        <button class="lux-save-btn" onclick="saveLuxReading()">📝 儲存此次讀數</button>
+      </div>
+
+      <!-- Log -->
+      <div id="lux-log"></div>
+
+    </div>
+  </div>
+</div>
+
 <button class="fab" onclick="scrollToTop()">▲ 回頂部</button>
 <button class="fab2" onclick="openReport()">📋 產生報告</button>
+<button class="fab3" onclick="openLux()">🔆 光度計</button>
 
 <div class="modal-bg" id="modal-bg" onclick="bgClick(event)">
   <div class="modal">
@@ -802,6 +913,144 @@ function confirmReset(){
     render();
     closeReport();
   }
+}
+
+// ── Lux meter ────────────────────────────────────────────────────────────────
+let luxConnected=false, luxInterval=null, lastLux=null, luxReadings=[];
+
+function openLux(){ document.getElementById('lux-bg').className='modal-bg show'; }
+function closeLux(){
+  document.getElementById('lux-bg').className='modal-bg';
+  // keep polling alive so user can close modal and reopen
+}
+function luxBgClick(e){ if(e.target===document.getElementById('lux-bg'))closeLux(); }
+
+async function fetchLuxValue(){
+  const ip=document.getElementById('lux-ip').value.trim();
+  const port=document.getElementById('lux-port').value.trim()||'4444';
+  if(!ip)return null;
+  try{
+    const ctrl=new AbortController();
+    const tid=setTimeout(()=>ctrl.abort(),2800);
+    const res=await fetch(`http://${ip}:${port}/byFunctionId/lightSensor.json`,{signal:ctrl.signal,mode:'cors'});
+    clearTimeout(tid);
+    const d=await res.json();
+    return d.lightSensor?.currentValue??null;
+  }catch(e){ return null; }
+}
+
+async function toggleLux(){
+  if(luxConnected){
+    clearInterval(luxInterval);luxInterval=null;luxConnected=false;
+    document.getElementById('lux-conn-btn').textContent='連線';
+    setLuxStatus('已中斷連線','');
+    return;
+  }
+  setLuxStatus('連線中…','');
+  const val=await fetchLuxValue();
+  if(val===null){
+    setLuxStatus('⚠️ 無法連線。請確認：IP 正確、VirtualHub 執行中、頁面使用 http:// 開啟','lux-st-err');
+    return;
+  }
+  luxConnected=true;
+  document.getElementById('lux-conn-btn').textContent='中斷';
+  setLuxStatus('✓ 連線成功，每秒更新','lux-st-ok');
+  updateLuxDisplay(val);
+  luxInterval=setInterval(async()=>{
+    const v=await fetchLuxValue();
+    if(v!==null){ updateLuxDisplay(v); }
+    else{
+      clearInterval(luxInterval);luxInterval=null;luxConnected=false;
+      document.getElementById('lux-conn-btn').textContent='重新連線';
+      setLuxStatus('⚠️ 連線中斷','lux-st-err');
+    }
+  },1000);
+}
+
+function setLuxStatus(msg,cls){
+  const el=document.getElementById('lux-status');
+  el.textContent=msg;
+  el.className='lux-status'+(cls?' '+cls:'');
+}
+
+function updateLuxDisplay(lux){
+  lastLux=lux;
+  const bigEl=document.getElementById('lux-big');
+  const unitEl=document.getElementById('lux-unit-lbl');
+  if(lux>=10000){ bigEl.textContent=(lux/1000).toFixed(1);unitEl.textContent='klux'; }
+  else if(lux>=100){ bigEl.textContent=lux.toFixed(0);unitEl.textContent='lux'; }
+  else{ bigEl.textContent=lux.toFixed(2);unitEl.textContent='lux'; }
+  // bar: 0~10000 lux scale
+  document.getElementById('lux-bar').style.width=Math.min(100,lux/10000*100)+'%';
+  calcCd();
+}
+
+function calcCd(){
+  if(lastLux===null)return;
+  const type=document.getElementById('lux-type').value;
+  const distRow=document.getElementById('lux-dist-row');
+  const cdEl=document.getElementById('lux-cd');
+  const passEl=document.getElementById('lux-pass');
+  const isLuxDirect=(type==='illum'||type==='stair');
+  distRow.style.display=isLuxDirect?'none':'';
+  if(isLuxDirect){
+    const req=type==='illum'?2:1;
+    const pass=lastLux>=req;
+    cdEl.textContent=lastLux.toFixed(2)+' lux';
+    passEl.textContent=(pass?'✓ 符合法規':'✕ 不符合') + `（法規 ≥ ${req} lux）`;
+    passEl.className='lux-pass '+(pass?'lux-pass-ok':'lux-pass-fail');
+  }else{
+    const dist=parseFloat(document.getElementById('lux-dist').value)||1;
+    const cd=lastLux*dist*dist;
+    const req=(type==='exit')?20:25;
+    const pass=cd>=req;
+    cdEl.textContent=cd.toFixed(1)+' cd';
+    passEl.textContent=(pass?'✓ 符合法規':'✕ 不符合')+`（法規 ≥ ${req} cd，距離 ${dist}m）`;
+    passEl.className='lux-pass '+(pass?'lux-pass-ok':'lux-pass-fail');
+  }
+}
+
+function saveLuxReading(){
+  if(lastLux===null){ alert('尚未取得讀值'); return; }
+  const type=document.getElementById('lux-type').value;
+  const dist=parseFloat(document.getElementById('lux-dist').value)||1;
+  const note=document.getElementById('lux-note').value||'（無備註）';
+  const typeNames={'exit':'出口標示燈','sign':'避難方向燈','illum':'緊急照明燈','stair':'樓層燈','ug':'地下室方向燈'};
+  const now=new Date();
+  const ts=now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0')+':'+now.getSeconds().toString().padStart(2,'0');
+  let result,pass;
+  if(type==='illum'||type==='stair'){
+    const req=type==='illum'?2:1;
+    pass=lastLux>=req;
+    result=`${lastLux.toFixed(2)} lux（法規≥${req} lux）→ ${pass?'✓合格':'✕不合格'}`;
+  }else{
+    const cd=lastLux*dist*dist;
+    const req=type==='exit'?20:25;
+    pass=cd>=req;
+    result=`${lastLux.toFixed(1)} lux × ${dist}m² = ${cd.toFixed(1)} cd（法規≥${req} cd）→ ${pass?'✓合格':'✕不合格'}`;
+  }
+  luxReadings.unshift({ts,note,type:typeNames[type],result,pass});
+  document.getElementById('lux-note').value='';
+  renderLuxLog();
+}
+
+function delLuxReading(i){ luxReadings.splice(i,1); renderLuxLog(); }
+
+function renderLuxLog(){
+  const el=document.getElementById('lux-log');
+  if(!luxReadings.length){el.innerHTML='';return;}
+  let html='<div class="lux-sec-title" style="margin-top:8px">量測記錄</div>';
+  luxReadings.forEach((r,i)=>{
+    html+=`<div class="lux-log-item ${r.pass?'lux-log-ok':'lux-log-fail'}">
+      <div style="display:flex;justify-content:space-between">
+        <span class="lux-log-ts">${r.ts}　${r.type}</span>
+        <button onclick="delLuxReading(${i})" style="background:none;border:none;cursor:pointer;color:var(--c-text3);font-size:13px;padding:0">✕</button>
+      </div>
+      <div class="lux-log-note">${r.note}</div>
+      <div class="lux-log-res">${r.result}</div>
+    </div>`;
+  });
+  el.innerHTML=html;
 }
 
 // ── Init ─────────────────────────────────────────────────────────────────────

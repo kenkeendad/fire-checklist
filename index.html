@@ -171,6 +171,15 @@ body{background:var(--c-bg3);color:var(--c-text);font-family:-apple-system,Blink
 .mbtn:active{transform:scale(.97)}
 .copy-ok{font-size:11px;color:#3B6D11;text-align:center;padding:4px 0;display:none}
 
+/* ── Report filter bar ── */
+.report-filters{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
+.rf-btn{font-size:11px;padding:5px 11px;border-radius:20px;border:1px solid var(--c-border);background:var(--c-bg2);color:var(--c-text2);cursor:pointer;font-weight:500;-webkit-tap-highlight-color:transparent}
+.rf-btn.active{background:var(--c-text);color:var(--c-bg);border-color:transparent}
+.rf-count{font-size:10px;opacity:.7;margin-left:2px}
+/* report-item delete button */
+.ri-x{background:none;border:none;color:var(--c-border2);font-size:13px;cursor:pointer;padding:0 2px 0 6px;margin-left:auto;flex-shrink:0;line-height:1;-webkit-tap-highlight-color:transparent}
+.ri-x:hover,.ri-x:active{color:var(--c-red)}
+
 /* ── Print ── */
 #print-area{display:none}
 @media print{
@@ -612,37 +621,85 @@ function render(){
 }
 
 // ── Report ────────────────────────────────────────────────────────────────────
+let reportHidden = new Set(); // keys removed in current report session
+let reportFilter = 'all';    // current filter mode
+
+function shouldInclude(key, status){
+  if(reportHidden.has(key)) return false;
+  if(reportFilter==='repair')  return status==='repair';
+  if(reportFilter==='recheck') return status==='recheck';
+  if(reportFilter==='issues')  return status==='repair'||status==='recheck';
+  if(reportFilter==='active')  return status!=='ok'&&status!=='done';
+  return true;
+}
+
+function delReportItem(key){
+  reportHidden.add(key);
+  const el=document.querySelector(`.report-item[data-rkey="${key}"]`);
+  if(el) el.style.display='none';
+  // update section empty-hide
+  document.querySelectorAll('.report-section').forEach(sec=>{
+    const visible=sec.querySelectorAll('.report-item:not([style*="none"])');
+    sec.style.display=visible.length?'':'none';
+  });
+}
+
+function filterReport(mode){
+  reportFilter=mode;
+  document.querySelectorAll('.rf-btn').forEach(b=>b.classList.toggle('active',b.dataset.f===mode));
+  document.querySelectorAll('.report-item[data-rkey]').forEach(el=>{
+    const s=el.dataset.rs||'';
+    const k=el.dataset.rkey;
+    el.style.display=(reportHidden.has(k)||!shouldInclude(k,s))?'none':'';
+  });
+  document.querySelectorAll('.report-section').forEach(sec=>{
+    const vis=[...sec.querySelectorAll('.report-item[data-rkey]')].some(el=>el.style.display!=='none');
+    sec.style.display=vis?'':'none';
+  });
+}
+
 function openReport(){
+  reportHidden=new Set();
+  reportFilter='all';
   const now=new Date();
   const ts=now.getFullYear()+'/'+(now.getMonth()+1).toString().padStart(2,'0')+'/'+now.getDate().toString().padStart(2,'0')+' '+now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0');
-  const tot=allKeys.length;
   const cnt={repair:0,recheck:0,done:0,ok:0,pending:0};
   allKeys.forEach(k=>{const s=chk[k]||'';if(cnt[s]!==undefined)cnt[s]++;else cnt.pending++;});
-  let html=`<div class="report-meta">巡查日期：115/04/14<br>輸出時間：${ts}<br>需修繕：${cnt.repair}項　待複查：${cnt.recheck}項　已完修：${cnt.done}項　正常：${cnt.ok}項　待確認：${cnt.pending}項<br>地點：新北市汐止區福德一路56號</div>`;
-  BLDS.forEach((b,bi)=>{
+
+  const filterBar=`<div class="report-filters">
+    <button class="rf-btn active" data-f="all"     onclick="filterReport('all')"    >全部<span class="rf-count">${allKeys.length}</span></button>
+    <button class="rf-btn"        data-f="issues"   onclick="filterReport('issues')"  >有問題<span class="rf-count">${cnt.repair+cnt.recheck}</span></button>
+    <button class="rf-btn"        data-f="repair"   onclick="filterReport('repair')"  >需修繕<span class="rf-count">${cnt.repair}</span></button>
+    <button class="rf-btn"        data-f="recheck"  onclick="filterReport('recheck')" >待複查<span class="rf-count">${cnt.recheck}</span></button>
+    <button class="rf-btn"        data-f="active"   onclick="filterReport('active')"  >排除已完成<span class="rf-count">${cnt.repair+cnt.recheck+cnt.pending}</span></button>
+  </div>`;
+
+  let html=filterBar+`<div class="report-meta">巡查日期：115/04/14<br>輸出時間：${ts}<br>需修繕：${cnt.repair}項　待複查：${cnt.recheck}項　已完修：${cnt.done}項　正常：${cnt.ok}項　待確認：${cnt.pending}項<br>地點：新北市汐止區福德一路56號</div>`;
+
+  BLDS.forEach((b)=>{
     const bkeys=allKeys.filter(k=>k.startsWith(b.id+'|'));
     html+=`<div class="report-section"><div class="report-sec-title">${b.name} <span style="font-size:11px;font-weight:400;color:var(--c-text2)">${bkeys.length} 項</span></div>`;
     b.cats.forEach((cg,ci)=>{
-      const c=CATS[cg.cat];
       cg.items.forEach((it,ii)=>{
         const k=mkKey(b.id,ci,ii);
         const s=chk[k]||'';
         const cls=s==='repair'?'ri-repair':s==='recheck'?'ri-recheck':s==='done'?'ri-done':s==='ok'?'ri-ok':'ri-no';
-        const lbl=STATUS_LABEL[s];
-        html+=`<div class="report-item"><span class="${cls}">[${lbl}]</span><span>${it.label}</span></div>`;
+        html+=`<div class="report-item" data-rkey="${k}" data-rs="${s}"><span class="${cls}">[${STATUS_LABEL[s]}]</span><span>${it.label}</span><button class="ri-x" onclick="delReportItem('${k}')" title="從報告移除">✕</button></div>`;
       });
     });
     // Extinguisher summary
     const extFloors=EXT_FLOORS[b.id]||[];
     if(extFloors.length>0){
       const issues=extFloors.filter(fl=>{const d=ext[mkExtKey(b.id,fl)];return d&&d.exp&&!d.pressure;});
-      const done=extFloors.filter(fl=>{const d=ext[mkExtKey(b.id,fl)];return d&&d.exp&&d.pressure;});
+      const done2=extFloors.filter(fl=>{const d=ext[mkExtKey(b.id,fl)];return d&&d.exp&&d.pressure;});
       const pending=extFloors.filter(fl=>{const d=ext[mkExtKey(b.id,fl)];return !d||!d.exp;});
       const issueLabel=issues.length>0?'　⚠️壓力異常：'+issues.map(fl=>`${b.name}${fl}`).join('、'):'';
-      html+=`<div class="report-item"><span class="ri-repair">[🧯滅火器 ${extFloors.length}層]</span><span>✓完成：${done.length}　異常：${issues.length}　待查：${pending.length}${issueLabel}</span></div>`;
+      const extKey='ext-'+b.id;
+      html+=`<div class="report-item" data-rkey="${extKey}" data-rs="ext"><span class="ri-repair">[🧯滅火器 ${extFloors.length}層]</span><span>✓${done2.length}　異常${issues.length}　待查${pending.length}${issueLabel}</span><button class="ri-x" onclick="delReportItem('${extKey}')" title="從報告移除">✕</button></div>`;
     }
     html+='</div>';
   });
+
   document.getElementById('modal-body').innerHTML=html;
   document.getElementById('copy-ok').style.display='none';
   document.getElementById('modal-bg').className='modal-bg show';
@@ -671,13 +728,14 @@ function printReportToPDF(){
       cg.items.forEach((it,ii)=>{
         const k=mkKey(b.id,ci,ii);
         const s=chk[k]||'';
+        if(!shouldInclude(k,s))return;
         const cls='print-status-'+(s||'pending');
         html+=`<tr><td>${c.name}<br><span style="color:#555;font-size:11px">${c.law}</span></td><td>${it.label}</td><td class="${cls}">${STATUS_LABEL[s]}</td></tr>`;
       });
     });
     // Extinguisher in print
     const extFloors=EXT_FLOORS[b.id]||[];
-    if(extFloors.length>0){
+    if(extFloors.length>0&&!reportHidden.has('ext-'+b.id)){
       html+=`<tr><td colspan="3" style="background:#fdf4e7;font-weight:700;color:#7a4400">🧯 滅火器查核記錄</td></tr>`;
       html+=`<tr><th>樓層</th><th>有效期限</th><th>壓力正常</th></tr>`;
       extFloors.forEach(fl=>{
@@ -709,14 +767,15 @@ function copyReport(){
   BLDS.forEach(b=>{
     txt+='\n【'+b.name+'】\n';
     b.cats.forEach((cg,ci)=>{
-      const c=CATS[cg.cat];
       cg.items.forEach((it,ii)=>{
         const k=mkKey(b.id,ci,ii);
-        txt+='  ['+STATUS_LABEL[chk[k]||'']+'] '+it.label+'\n';
+        const s=chk[k]||'';
+        if(!shouldInclude(k,s))return;
+        txt+='  ['+STATUS_LABEL[s]+'] '+it.label+'\n';
       });
     });
     const extFloors=EXT_FLOORS[b.id]||[];
-    if(extFloors.length>0){
+    if(extFloors.length>0&&!reportHidden.has('ext-'+b.id)){
       const issues=extFloors.filter(fl=>{const d=ext[mkExtKey(b.id,fl)];return d&&d.exp&&!d.pressure;});
       const done=extFloors.filter(fl=>{const d=ext[mkExtKey(b.id,fl)];return d&&d.exp&&d.pressure;});
       const pending=extFloors.filter(fl=>{const d=ext[mkExtKey(b.id,fl)];return !d||!d.exp;});

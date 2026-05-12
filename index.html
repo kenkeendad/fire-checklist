@@ -39,8 +39,17 @@ body{background:var(--c-bg3);color:var(--c-text);font-family:-apple-system,Blink
 
 /* ── Top bar ── */
 .top-bar{background:var(--c-bg);border-bottom:1px solid var(--c-border);padding:12px 16px;position:sticky;top:0;z-index:100}
-.top-title{font-size:15px;font-weight:600;color:var(--c-text)}
+.top-title-row{display:flex;align-items:center;gap:8px}
+.top-title{font-size:15px;font-weight:600;color:var(--c-text);flex:1}
 .top-sub{font-size:11px;color:var(--c-text2);margin-top:2px}
+.meta-edit-btn{font-size:12px;color:var(--c-text3);background:none;border:1px solid var(--c-border);border-radius:6px;padding:2px 7px;cursor:pointer;flex-shrink:0;-webkit-tap-highlight-color:transparent}
+.meta-edit-btn:active{background:var(--c-bg2)}
+.meta-panel{display:none;margin-top:8px;padding:10px 12px;background:var(--c-bg2);border-radius:10px;border:1px solid var(--c-border);gap:8px;flex-direction:column}
+.meta-panel.show{display:flex}
+.meta-row{display:flex;align-items:center;gap:8px}
+.meta-lbl{font-size:11px;color:var(--c-text2);white-space:nowrap;min-width:60px}
+.meta-inp{flex:1;font-size:12px;padding:5px 8px;border:1px solid var(--c-border2);border-radius:6px;background:var(--c-bg);color:var(--c-text);outline:none}
+.meta-inp:focus{border-color:var(--c-blue)}
 .top-stats{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
 .stat{background:var(--c-bg2);border-radius:8px;padding:5px 8px;text-align:center;flex:1;min-width:58px}
 .sn{font-size:17px;font-weight:700;color:var(--c-text)}
@@ -276,8 +285,25 @@ body{background:var(--c-bg3);color:var(--c-text);font-family:-apple-system,Blink
 <body>
 
 <div class="top-bar">
-  <div class="top-title">伊登花園消防缺失複查表</div>
-  <div class="top-sub">115/04/14 · 新北市汐止區福德一路56號 · 上羿機電 劉稼宏 0981-981-933</div>
+  <div class="top-title-row">
+    <div class="top-title">伊登花園消防缺失複查表</div>
+    <button class="meta-edit-btn" onclick="toggleMetaPanel()" id="meta-edit-btn">✎ 編輯</button>
+  </div>
+  <div class="top-sub" id="top-sub-display">載入中…</div>
+  <div class="meta-panel" id="meta-panel">
+    <div class="meta-row">
+      <span class="meta-lbl">巡查日期</span>
+      <input class="meta-inp" id="meta-date" placeholder="115/04/14" maxlength="10" oninput="saveMeta()">
+    </div>
+    <div class="meta-row">
+      <span class="meta-lbl">廠商人員</span>
+      <input class="meta-inp" id="meta-vendor" placeholder="上羿機電 劉稼宏 0981-981-933" oninput="saveMeta()">
+    </div>
+    <div class="meta-row">
+      <span class="meta-lbl">社區檢查人</span>
+      <input class="meta-inp" id="meta-community" placeholder="社區管委會 ○○○" oninput="saveMeta()">
+    </div>
+  </div>
   <div class="top-stats">
     <div class="stat"><div class="sn red" id="s-repair">0</div><div class="sl">確認需修繕</div></div>
     <div class="stat"><div class="sn amber" id="s-recheck">0</div><div class="sl">待複查</div></div>
@@ -459,10 +485,46 @@ body{background:var(--c-bg3);color:var(--c-text);font-family:-apple-system,Blink
 // ── Storage ──────────────────────────────────────────────────────────────────
 const STORAGE_KEY = 'fire_chk_v2';
 const EXT_KEY     = 'fire_ext_v1';
+const META_KEY    = 'fire_meta_v1';
 function saveChk(){ try{localStorage.setItem(STORAGE_KEY,JSON.stringify(chk))}catch(e){} }
 function loadChk(){ try{const d=localStorage.getItem(STORAGE_KEY);if(d)chk=JSON.parse(d)}catch(e){} }
 function saveExt(){ try{localStorage.setItem(EXT_KEY,JSON.stringify(ext))}catch(e){} }
 function loadExt(){ try{const d=localStorage.getItem(EXT_KEY);if(d)ext=JSON.parse(d)}catch(e){} }
+
+// ── Inspection meta ───────────────────────────────────────────────────────────
+let meta = {date:'115/04/14', vendor:'上羿機電 劉稼宏 0981-981-933', community:''};
+
+function saveMeta(){
+  meta.date      = document.getElementById('meta-date').value.trim()      || '115/04/14';
+  meta.vendor    = document.getElementById('meta-vendor').value.trim()    || '上羿機電 劉稼宏';
+  meta.community = document.getElementById('meta-community').value.trim();
+  try{ localStorage.setItem(META_KEY, JSON.stringify(meta)); }catch(e){}
+  updTopSub();
+}
+
+function loadMeta(){
+  try{
+    const d = localStorage.getItem(META_KEY);
+    if(d) meta = Object.assign(meta, JSON.parse(d));
+  }catch(e){}
+  document.getElementById('meta-date').value      = meta.date;
+  document.getElementById('meta-vendor').value    = meta.vendor;
+  document.getElementById('meta-community').value = meta.community;
+  updTopSub();
+}
+
+function updTopSub(){
+  const parts = [meta.date, '新北市汐止區福德一路56號', meta.vendor];
+  if(meta.community) parts.push('社區：'+meta.community);
+  document.getElementById('top-sub-display').textContent = parts.join(' · ');
+}
+
+function toggleMetaPanel(){
+  const p = document.getElementById('meta-panel');
+  const show = !p.classList.contains('show');
+  p.classList.toggle('show', show);
+  document.getElementById('meta-edit-btn').textContent = show ? '✔ 完成' : '✎ 編輯';
+}
 
 // ── Status cycle ──────────────────────────────────────────────────────────────
 const STATUS_CYCLE = ['','ok','recheck','repair','done'];
@@ -947,7 +1009,8 @@ function openReport(){
     <button class="rf-btn"        data-f="active"   onclick="filterReport('active')"  >排除已完成<span class="rf-count">${cnt.repair+cnt.recheck+cnt.pending}</span></button>
   </div>`;
 
-  let html=filterBar+`<div class="report-meta">巡查日期：115/04/14<br>輸出時間：${ts}<br>需修繕：${cnt.repair}項　待複查：${cnt.recheck}項　已完修：${cnt.done}項　正常：${cnt.ok}項　待確認：${cnt.pending}項<br>地點：新北市汐止區福德一路56號</div>`;
+  const communityLine = meta.community ? `<br>社區檢查人：${meta.community}` : '';
+  let html=filterBar+`<div class="report-meta">巡查日期：${meta.date}<br>廠商人員：${meta.vendor}${communityLine}<br>輸出時間：${ts}<br>需修繕：${cnt.repair}項　待複查：${cnt.recheck}項　已完修：${cnt.done}項　正常：${cnt.ok}項　待確認：${cnt.pending}項<br>地點：新北市汐止區福德一路56號</div>`;
 
   BLDS.forEach((b)=>{
     const bkeys=allKeys.filter(k=>k.startsWith(b.id+'|'));
@@ -990,8 +1053,8 @@ function printReportToPDF(){
   const cnt={repair:0,recheck:0,done:0,ok:0,pending:0};
   allKeys.forEach(k=>{const s=chk[k]||'';if(cnt[s]!==undefined)cnt[s]++;else cnt.pending++;});
   let html=`<div class="print-header"><h1>伊登花園 消防設備缺失複查報告書</h1>
-    <div class="print-meta"><span><strong>巡查日期：</strong>115/04/14</span><span><strong>輸出時間：</strong>${ts}</span></div>
-    <div class="print-meta"><span><strong>社區地點：</strong>新北市汐止區福德一路56號</span><span><strong>檢修負責人：</strong>上羿機電 劉稼宏</span></div>
+    <div class="print-meta"><span><strong>巡查日期：</strong>${meta.date}</span><span><strong>輸出時間：</strong>${ts}</span></div>
+    <div class="print-meta"><span><strong>社區地點：</strong>新北市汐止區福德一路56號</span><span><strong>廠商人員：</strong>${meta.vendor}</span>${meta.community?`<span><strong>社區檢查人：</strong>${meta.community}</span>`:''}</div>
     <div class="print-meta"><span><strong>需修繕：</strong>${cnt.repair}</span><span><strong>待複查：</strong>${cnt.recheck}</span><span><strong>已完修：</strong>${cnt.done}</span><span><strong>正常：</strong>${cnt.ok}</span><span><strong>待確認：</strong>${cnt.pending}</span></div></div>`;
 
   BLDS.forEach(b=>{
@@ -1038,7 +1101,7 @@ function copyReport(){
   const ts=now.getFullYear()+'/'+(now.getMonth()+1).toString().padStart(2,'0')+'/'+now.getDate().toString().padStart(2,'0');
   const cnt={repair:0,recheck:0,done:0,ok:0,pending:0};
   allKeys.forEach(k=>{const s=chk[k]||'';if(cnt[s]!==undefined)cnt[s]++;else cnt.pending++;});
-  let txt='【伊登花園消防缺失複查報告】\n巡查日期：115/04/14　輸出：'+ts+'\n';
+  let txt='【伊登花園消防缺失複查報告】\n巡查日期：'+meta.date+'　輸出：'+ts+'\n廠商人員：'+meta.vendor+(meta.community?'　社區檢查人：'+meta.community:'')+'\n';
   txt+=`需修繕：${cnt.repair}　待複查：${cnt.recheck}　已完修：${cnt.done}　正常：${cnt.ok}　待確認：${cnt.pending}\n━━━━━━━━━━━━━━\n`;
   BLDS.forEach(b=>{
     txt+='\n【'+b.name+'】\n';
@@ -1553,6 +1616,7 @@ function renderLuxLog(){
 loadChk();
 loadExt();
 loadLux();
+loadMeta();
 render();
 </script>
 </body>

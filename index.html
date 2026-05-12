@@ -214,6 +214,20 @@ body{background:var(--c-bg3);color:var(--c-text);font-family:-apple-system,Blink
 /* Note & log */
 .lux-note{width:100%;font-size:13px;border:1px solid var(--c-border2);border-radius:6px;padding:8px 9px;background:var(--c-bg);color:var(--c-text);resize:vertical;min-height:48px;outline:none;box-sizing:border-box}
 .lux-save-btn{width:100%;margin-top:8px;font-size:13px;font-weight:600;padding:10px;border-radius:7px;border:none;cursor:pointer;background:var(--c-blue);color:#fff;-webkit-tap-highlight-color:transparent}
+/* Quick record panel */
+.lux-quick-panel{display:none;margin-top:4px}
+.lux-quick-panel.vis{display:block}
+.lux-qrow{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:7px;margin-bottom:4px;background:var(--c-bg2);transition:background .2s}
+.lux-qrow.qok  {background:var(--c-grn-bg)}
+.lux-qrow.qfail{background:var(--c-red-bg)}
+.lux-qtype{font-size:12px;font-weight:600;color:var(--c-text);flex:1;line-height:1.3}
+.lux-qreq {font-size:10px;color:var(--c-text3);display:block}
+.lux-qval {font-size:13px;font-weight:700;min-width:72px;text-align:right;color:var(--c-text)}
+.lux-qpass{font-size:11px;font-weight:700;min-width:28px;text-align:center}
+.lux-qpass.ok  {color:var(--c-grn)}
+.lux-qpass.fail{color:var(--c-red)}
+.lux-qbtn{font-size:12px;padding:5px 9px;border-radius:5px;border:none;cursor:pointer;background:var(--c-blue);color:#fff;flex-shrink:0;-webkit-tap-highlight-color:transparent;transition:background .15s}
+.lux-qbtn:active{background:var(--c-teal)}
 .lux-tab{flex:1;font-size:12px;font-weight:600;padding:8px 4px;border:none;cursor:pointer;background:var(--c-bg2);color:var(--c-text2);-webkit-tap-highlight-color:transparent}
 .lux-tab-active{background:var(--c-teal);color:#fff}
 .lux-log-item{border-radius:7px;padding:8px 10px;margin-top:6px;border-left:3px solid transparent}
@@ -353,11 +367,18 @@ body{background:var(--c-bg3);color:var(--c-text);font-family:-apple-system,Blink
         </div>
       </div>
 
-      <!-- Record -->
+      <!-- Quick record panel — visible when connected -->
       <div class="lux-sec">
-        <div class="lux-sec-title">記錄本次量測</div>
+        <div class="lux-sec-title">位置備註（快速紀錄共用）</div>
         <input id="lux-note" class="lux-inp" placeholder="位置說明，例：A棟14F出口燈">
-        <button class="lux-save-btn" onclick="saveLuxReading()">📝 儲存此次讀數</button>
+      </div>
+
+      <div class="lux-sec">
+        <div class="lux-sec-title">各法規快速紀錄</div>
+        <div id="lux-quick-panel" class="lux-quick-panel">
+          <!-- rows rendered by JS -->
+        </div>
+        <button class="lux-save-btn" onclick="saveLuxReading()" style="margin-top:0">📝 依目前下拉選單儲存</button>
       </div>
 
       <!-- Log -->
@@ -1135,6 +1156,62 @@ function setLuxStatus(msg,cls){
   el.className='lux-status'+(cls?' '+cls:'');
 }
 
+// ── Quick panel data ──────────────────────────────────────────────────────────
+const QUICK_TYPES=[
+  {id:'exit',  name:'出口標示燈',   req:20, unit:'cd',  direct:false},
+  {id:'sign',  name:'避難方向燈',   req:25, unit:'cd',  direct:false},
+  {id:'illum', name:'緊急照明燈',   req:2,  unit:'lux', direct:true },
+  {id:'stair', name:'樓層燈',       req:1,  unit:'lux', direct:true },
+  {id:'ug',    name:'地下室方向燈', req:25, unit:'cd',  direct:false},
+];
+
+function buildQuickPanel(){
+  const panel=document.getElementById('lux-quick-panel');
+  if(!panel)return;
+  panel.innerHTML=QUICK_TYPES.map(t=>`
+    <div class="lux-qrow" id="qrow-${t.id}">
+      <div class="lux-qtype">${t.name}<span class="lux-qreq">法規 ≥ ${t.req} ${t.unit}</span></div>
+      <span class="lux-qval" id="qval-${t.id}">—</span>
+      <span class="lux-qpass" id="qpass-${t.id}">—</span>
+      <button class="lux-qbtn" id="qbtn-${t.id}" onclick="quickSave('${t.id}')">📝</button>
+    </div>`).join('');
+}
+
+function updateQuickPanel(){
+  if(!luxConnected||lastLux===null)return;
+  const dist=parseFloat(document.getElementById('lux-dist').value)||1;
+  QUICK_TYPES.forEach(t=>{
+    const row=document.getElementById('qrow-'+t.id);
+    const valEl=document.getElementById('qval-'+t.id);
+    const passEl=document.getElementById('qpass-'+t.id);
+    if(!row)return;
+    const calc=t.direct?lastLux:lastLux*dist*dist;
+    const pass=calc>=t.req;
+    valEl.textContent=calc.toFixed(t.direct?2:1)+' '+t.unit;
+    passEl.textContent=pass?'✓':'✕';
+    passEl.className='lux-qpass '+(pass?'ok':'fail');
+    row.className='lux-qrow '+(pass?'qok':'qfail');
+  });
+}
+
+function quickSave(typeId){
+  if(lastLux===null)return;
+  const t=QUICK_TYPES.find(x=>x.id===typeId);
+  const note=document.getElementById('lux-note').value||'（未填位置）';
+  const dist=parseFloat(document.getElementById('lux-dist').value)||1;
+  const calc=t.direct?lastLux:lastLux*dist*dist;
+  const pass=calc>=t.req;
+  const result=t.direct
+    ?`${lastLux.toFixed(2)} lux（法規≥${t.req} lux）→ ${pass?'✓合格':'✕不合格'}`
+    :`${lastLux.toFixed(1)} lux × ${dist}m² = ${calc.toFixed(1)} cd（法規≥${t.req} cd）→ ${pass?'✓合格':'✕不合格'}`;
+  const now=new Date();
+  const ts=now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0')+':'+now.getSeconds().toString().padStart(2,'0');
+  luxReadings.unshift({ts,note,type:t.name,result,pass});
+  renderLuxLog();
+  const btn=document.getElementById('qbtn-'+typeId);
+  if(btn){btn.textContent='✓ 已存';setTimeout(()=>{btn.textContent='📝';},1200);}
+}
+
 function updateLuxDisplay(lux){
   lastLux=lux;
   const bigEl=document.getElementById('lux-big');
@@ -1142,9 +1219,15 @@ function updateLuxDisplay(lux){
   if(lux>=10000){ bigEl.textContent=(lux/1000).toFixed(1);unitEl.textContent='klux'; }
   else if(lux>=100){ bigEl.textContent=lux.toFixed(0);unitEl.textContent='lux'; }
   else{ bigEl.textContent=lux.toFixed(2);unitEl.textContent='lux'; }
-  // bar: 0~10000 lux scale
   document.getElementById('lux-bar').style.width=Math.min(100,lux/10000*100)+'%';
   calcCd();
+  updateQuickPanel();
+  // Show quick panel when first connected
+  const panel=document.getElementById('lux-quick-panel');
+  if(panel&&!panel.classList.contains('vis')){
+    buildQuickPanel();
+    panel.classList.add('vis');
+  }
 }
 
 function calcCd(){
@@ -1170,6 +1253,7 @@ function calcCd(){
     passEl.textContent=(pass?'✓ 符合法規':'✕ 不符合')+`（法規 ≥ ${req} cd，距離 ${dist}m）`;
     passEl.className='lux-pass '+(pass?'lux-pass-ok':'lux-pass-fail');
   }
+  updateQuickPanel(); // sync quick panel when distance changes
 }
 
 function saveLuxReading(){

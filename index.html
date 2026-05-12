@@ -648,9 +648,12 @@ function loadLux(){
   }catch(e){ luxData={}; }
 }
 
-function onLuxChange(key, cat, label){
-  const inp = document.getElementById('lux-inp-'+key);
-  if(!inp) return;
+function onLuxChange(e){
+  const inp = e.target;
+  const key = inp.dataset.lkey;
+  const cat = inp.dataset.cat;
+  const label = inp.dataset.label || '';
+  if(!key) return;
   const raw = inp.value.trim();
   if(raw === ''){
     delete luxData[key];
@@ -791,7 +794,7 @@ function render(){
             <div class="cell-top"><span class="st ${STATUS_CLS[s]}" id="st-${k}">${STATUS_MARK[s]}</span>${mark}<span class="cell-txt">${it.label}${sev}</span></div>
             <div class="cell-lux-row" onclick="event.stopPropagation()">
               <span class="cell-lux-lbl">${unitHint}</span>
-              <input type="number" min="0" step="0.1" class="cell-lux-inp" id="lux-inp-${k}" placeholder="—" value="${lv !== undefined ? lv : ''}" inputmode="decimal" onchange="onLuxChange('${k}','${cg.cat}','${it.label.replace(/'/g,'\\'')}')">
+              <input type="number" min="0" step="0.1" class="cell-lux-inp" id="lux-inp-${k}" placeholder="—" value="${lv !== undefined ? lv : ''}" inputmode="decimal" data-lkey="${k}" data-cat="${cg.cat}" data-label="${it.label.replace(/"/g,'&quot;')}" onchange="onLuxChange(event)">
               <span class="cell-lux-res" id="lux-res-${k}">${resHtml}</span>
             </div>`;
         } else {

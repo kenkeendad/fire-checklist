@@ -374,16 +374,12 @@ body{background:var(--c-bg3);color:var(--c-text);font-family:-apple-system,Blink
           <div style="font-size:11px;color:var(--c-muted);margin-top:4px">用其他 app 量到數值後輸入此處，換算工具和快速紀錄同步生效</div>
 
           <!-- ALS sensor (best-effort) -->
-          <div style="margin-top:12px;font-weight:600;font-size:13px;margin-bottom:4px">📡 AmbientLightSensor（自動感光，需 Chrome 支援）</div>
-          <button id="als-btn" class="lux-btn" style="width:100%;justify-content:center" onclick="toggleALS()">啟動手機感光</button>
+          <div style="margin-top:12px;font-weight:600;font-size:13px;margin-bottom:4px">📡 自動感光（選用，依 Chrome 版本而定）</div>
+          <button id="als-btn" class="lux-btn" style="width:100%;justify-content:center" onclick="toggleALS()">點此嘗試啟動感光</button>
           <div id="als-status" class="lux-status" style="margin-top:6px">未啟動</div>
-          <div class="lux-tip" style="margin-top:8px;font-size:11px">
-            若顯示「不支援」，請複製下方網址貼入 Chrome 網址列，將選項設為 <b>Enabled</b> 後重新整理頁面：<br>
-            <div style="display:flex;align-items:center;gap:6px;margin-top:6px;flex-wrap:wrap">
-              <code id="als-flag-url" style="font-size:11px;background:#f1f5f9;padding:4px 8px;border-radius:6px;word-break:break-all;flex:1">chrome://flags/#enable-generic-sensor-extra-classes</code>
-              <button onclick="copyALSFlag(this)" style="flex-shrink:0;padding:4px 10px;border-radius:6px;border:1px solid var(--c-border);background:var(--c-card);cursor:pointer;font-size:12px">複製</button>
-            </div>
-            部分 Android 版本已移除此 flag，此時請改用上方手動輸入。
+          <div class="lux-tip" style="margin-top:8px;font-size:11px;color:var(--c-text3)">
+            Chrome 100 以上已移除 AmbientLightSensor 相關設定，多數新款手機無法使用此功能。<br>
+            若按鈕點下後顯示「不支援」，請直接使用上方<b>手動輸入</b>即可。
           </div>
         </div>
 

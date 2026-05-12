@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
-<title>伊登花園消防缺失複查表</title>
+<title>伊登花園消防缺失複查表 - 法規修正版</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -135,19 +135,11 @@ body{background:var(--c-bg3);color:var(--c-text);font-family:-apple-system,Blink
   .print-header h1 { font-size: 24px; margin: 0 0 12px 0; }
   .print-meta { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 8px; }
   
-  /* 設定每個建築區塊結束後強制換頁 */
   .print-bld-section { page-break-after: always; break-after: page; padding-bottom: 15px; }
-  
-  /* 將表格取消 page-break-inside: avoid，讓過長的表格可以自然跨頁 */
   .print-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 13px; }
-  
-  /* 確保每一列內容不被從中間切斷 */
   .print-table tr { page-break-inside: avoid; break-inside: avoid; }
-  
   .print-table th, .print-table td { border: 1px solid #000; padding: 8px 10px; text-align: left; }
   .print-table th { background-color: #e5e5e5 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  
-  /* 確保標題跟表格死死黏在一起，不會標題在上一頁，表格在下一頁 */
   .print-bld-title { font-size: 16px; font-weight: bold; margin: 0; background: #d4e3f0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; padding: 8px 10px; border: 1px solid #000; border-bottom: none; page-break-after: avoid; break-after: avoid; }
   
   .print-ok { color: #A32D2D !important; font-weight: bold; } 
@@ -173,7 +165,6 @@ body{background:var(--c-bg3);color:var(--c-text);font-family:-apple-system,Blink
 
 <div class="content" id="content"></div>
 
-<!-- 列印與PDF輸出專用區塊 -->
 <div id="print-area"></div>
 
 <button class="fab" onclick="scrollToTop()">▲ 回頂部</button>
@@ -230,7 +221,6 @@ function openReport(){
 function closeReport(){document.getElementById('modal-bg').className='modal-bg';}
 function bgClick(e){if(e.target===document.getElementById('modal-bg'))closeReport();}
 
-// 輸出完整A4報告/PDF 功能
 function printReportToPDF() {
   const now = new Date();
   const ts = now.getFullYear() + '/' + (now.getMonth() + 1).toString().padStart(2, '0') + '/' + now.getDate().toString().padStart(2, '0') + ' ' + now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
@@ -245,13 +235,11 @@ function printReportToPDF() {
     </div>
   `;
 
-  // 1. 生成各棟缺失清單
   BLDS.forEach(b => {
     const bkeys = allKeys.filter(k => k.startsWith(b.id + '|'));
     const dn2 = bkeys.filter(k => chk[k]).length;
     if (bkeys.length === 0) return;
 
-    // 將每個棟別用 print-bld-section 包起來，確保印完這棟就換頁
     html += `<div class="print-bld-section">`;
     html += `<div class="print-bld-title">${b.name} (已複查: ${dn2}/${bkeys.length})</div>`;
     html += `<table class="print-table">
@@ -273,7 +261,6 @@ function printReportToPDF() {
     html += `</tbody></table></div>`;
   });
 
-  // 2. 生成附錄尾頁 (因為上一個 section 已經強迫換頁，這裡就不需要再 forced page break 了)
   html += `
     <div style="padding-top: 10px;">
       <div class="print-header" style="margin-bottom: 20px;">
@@ -293,8 +280,8 @@ function printReportToPDF() {
   html += `</div>`;
 
   document.getElementById('print-area').innerHTML = html;
-  closeReport(); // 先關閉彈出視窗以免影響版面
-  setTimeout(() => window.print(), 300); // 稍微延遲等待 DOM 繪製完成後呼叫列印
+  closeReport();
+  setTimeout(() => window.print(), 300);
 }
 
 function copyReport(){
@@ -353,22 +340,22 @@ function confirmReset(){
   }
 }
 
+/* --- CATS 分類標籤修正 (法規標準補強) --- */
 const CATS={
-  illum:{ico:'💡',bg:'var(--c-teal-bg)',name:'照明燈',law:'斷電後緊急電源≥30分鐘'},
-  exit:{ico:'🚪',bg:'var(--c-grn-bg)',name:'出口燈',law:'斷電後電池≥30分鐘'},
-  sign:{ico:'🔆',bg:'var(--c-grn-bg)',name:'標示燈',law:'斷電後電池≥30分鐘'},
-  esc:{ico:'🪜',bg:'var(--c-purple-bg)',name:'避難器具燈',law:'斷電後電池≥30分鐘'},
-  stair:{ico:'🔢',bg:'var(--c-purple-bg)',name:'樓梯間樓層燈',law:'斷電後電池≥30分鐘'},
+  illum:{ico:'💡',bg:'var(--c-teal-bg)',name:'照明燈',law:'斷電後電池≥30分鐘，照度≥2~10 lux'},
+  exit:{ico:'🚪',bg:'var(--c-grn-bg)',name:'出口燈',law:'斷電後電池≥20或60分鐘，光度≥20 cd'},
+  sign:{ico:'🔆',bg:'var(--c-grn-bg)',name:'標示燈',law:'斷電後電池≥20或60分鐘，光度≥25 cd'},
+  esc:{ico:'🪜',bg:'var(--c-purple-bg)',name:'避難器具燈',law:'斷電後電池≥20或60分鐘'},
+  stair:{ico:'🔢',bg:'var(--c-purple-bg)',name:'樓梯間樓層燈',law:'斷電電池≥20或60分，梯面照度≥1 lux'},
   alarm:{ico:'🔔',bg:'var(--c-amber-bg)',name:'手動報警機',law:'故障燈亮即排除'},
   smoke:{ico:'🌫',bg:'var(--c-amber-bg)',name:'偵煙探測器',law:'故障燈亮即排除'},
   ext:{ico:'🧯',bg:'var(--c-red-bg)',name:'滅火器',law:'過期即刻汰換'},
   pump:{ico:'💧',bg:'var(--c-blue-bg)',name:'消防幫浦系統',law:'燈號及蜂鳴器需正常'},
-  dir:{ico:'➡',bg:'var(--c-gray-bg)',name:'方向燈',law:'斷電後電池≥30分鐘'},
+  dir:{ico:'➡',bg:'var(--c-gray-bg)',name:'方向燈',law:'斷電後電池≥20或60分鐘，光度≥25 cd'},
 };
 
 const f=l=>({label:l,defect:false});
 const fd=l=>({label:l,defect:true});
-
 function si(all,def){const s=new Set(def);return all.map(l=>({label:l,defect:s.has(l)}))}
 
 const A_ALL=['14F↑13F↓','13F↑12F↓','12F↑11F↓','11F↑10F↓','10F↑9F↓','9F↑8F↓','8F↑7F↓','7F↑6F↓','6F↑5F↓','5F↑4F↓','4F↑3F↓','3F↑2F↓','2F↑1MF↓','1MF↑1F↓','1F↑B1F↓','B1F↑B2F↓'];
@@ -445,6 +432,7 @@ const BLDS=[
   ]},
 ];
 
+/* --- LAWS 附錄條文修正 (整合最新標準) --- */
 const LAWS=[
   {ico:'🧯',bg:'var(--c-red-bg)',name:'滅火器',sev:true,
    ref:'消防法 §13：管理權人應維護消防安全設備正常功能。設置標準 §31：滅火器每年至少委託合格業者檢修一次，逾期未檢或藥劑失效應即更換。',
@@ -459,25 +447,24 @@ const LAWS=[
    ref:'設置標準 §118：偵煙型探測器需能在煙霧達規定濃度時自動觸發，任何故障須立即排除，不得以停用方式替代維修。',
    plain:'偵煙器是系統自動發現火災的眼睛。壞掉就等於瞎了，初期火災沒人知道。不能因為它不叫就當沒事，要換掉。'},
   {ico:'🚪',bg:'var(--c-grn-bg)',name:'出口燈／標示燈',sev:false,
-   ref:'設置標準 §146：出口燈、避難方向指示燈需24小時常亮；斷電後須由內建蓄電池自動切換，持續亮燈不得少於30分鐘。燈具故障（含燈管燒壞、電池失效）均需立即更換。',
-   plain:'停電的時候這些燈要靠自己的電池繼續亮30分鐘，讓大家找到逃生出口。燈具故障不亮、或電池撐不到30分鐘，都算違規必須修繕。'},
+   ref:'設置標準 §146-5、§155：出口標示燈光度須在20 cd以上，避難方向指示燈光度須在25 cd以上。斷電後由蓄電池自動切換，持續亮燈不得少於20分鐘（特定大型或地下建築為60分鐘）。',
+   plain:'法規對亮度有嚴格規定，不是有亮就好！停電時要靠電池亮至少20分鐘（大型/地下空間須達60分鐘）。燈具故障、亮度不達標、或電池續航力不足，都算違規必須修繕。'},
   {ico:'🪜',bg:'var(--c-purple-bg)',name:'避難器具燈',sev:false,
-   ref:'設置標準 §149：避難器具設置位置需以指示燈標示，燈具規格及持續供電要求比照 §146，斷電後電池維持≥30分鐘。',
-   plain:'這個燈是告訴人「這裡有緩降機可以逃」。燈壞了大家在煙霧中找不到器材，30分鐘電池同樣是基本要求。'},
+   ref:'設置標準 §149：避難器具設置位置需以指示燈標示，斷電後電池供電時間比照標示燈標準（≥20分鐘或特定場所≥60分鐘）。',
+   plain:'這個燈是告訴人「這裡有緩降機可以逃」。燈壞了大家在煙霧中找不到器材，電池供電時間一樣必須符合20或60分鐘的規範。'},
   {ico:'🔢',bg:'var(--c-purple-bg)',name:'樓梯間樓層燈',sev:false,
-   ref:'建築技術規則 §92：樓梯間需設置足夠照明，停電後緊急照明需維持一定時間。設置標準 §148：樓層方向指示燈斷電後蓄電池供電維持≥30分鐘，確保逃生路線方向清晰。',
-   plain:'樓梯間的燈壞掉，逃生時走到黑漆漆的樓梯很容易跌倒或走錯方向。停電時要靠電池亮至少30分鐘。'},
+   ref:'設置標準 §146-5、§155：樓梯之避難方向指示燈，照於樓梯級面之照度須在1 lux以上；斷電後蓄電池供電維持≥20分鐘（或特定場所≥60分鐘）。',
+   plain:'樓梯間的燈如果不夠亮，逃生時很容易跌倒或走錯方向。法規要求照在階梯上的亮度必須達1 lux以上，且停電時電池至少要能撐20分鐘。'},
   {ico:'💡',bg:'var(--c-teal-bg)',name:'照明燈（走廊／梯間）',sev:false,
-   ref:'建築技術規則 §92：走廊、樓梯間應設置緊急照明；停電後緊急電源需於10秒內自動切換，並維持≥30分鐘之照度。',
-   plain:'走廊跟樓梯的照明燈，停電10秒內要自動切緊急電源繼續亮，至少維持30分鐘。達不到就算不合格。'},
+   ref:'設置標準 §177、§178：停電後緊急電源需於10秒內自動切換，並維持≥30分鐘。地面水平照度一般場所≥2 lux，地下通道則需≥10 lux。',
+   plain:'這是一般的緊急照明，停電要能維持30分鐘。如果是地下室通道，因為更危險，亮度要求高達10 lux。達不到時間或亮度就不合格。'},
   {ico:'➡',bg:'var(--c-gray-bg)',name:'地下室方向燈',sev:false,
-   ref:'設置標準 §146：地下層避難方向指示燈需指向最近安全梯或出口，雙面燈兩面均需正常；斷電後電池維持≥30分鐘。',
-   plain:'地下室沒有自然採光，方向燈要清楚指向出口，兩面燈都要亮，電池要撐30分鐘。任何一顆壞都可能讓人在地下室迷路。'},
+   ref:'設置標準 §146-5、§155：地下層避難方向指示燈需指向最近安全梯或出口，兩面燈需正常，光度≥25 cd；斷電後電池須維持≥60分鐘（地下建築物標準）。',
+   plain:'地下室沒有自然採光，方向燈要清楚指向出口。因為是地下空間，電池標準更嚴格通常需要撐滿60分鐘，任何一顆不亮都可能讓人在濃煙中迷路。'},
 ];
 
 let chk={};
 let allKeys=[];
-
 function mkKey(bid,ci,ii){return bid+'|'+ci+'|'+ii}
 
 function updStats(){
@@ -499,35 +486,26 @@ function updStats(){
 function render(){
   const con=document.getElementById('content');
   con.innerHTML='';
-
   BLDS.forEach(b=>{
     const card=document.createElement('div');card.className='bld-card';
     const bk=[];
     b.cats.forEach((cg,ci)=>cg.items.forEach((_,ii)=>bk.push(mkKey(b.id,ci,ii))));
     bk.forEach(k=>allKeys.push(k));
-
     const hd=document.createElement('div');hd.className='bld-hd';
-    hd.innerHTML=`<div class="bld-name">${b.name}</div>
-      <span class="bdg bdg-r" id="bdg-${b.id}">${bk.length} 項待查</span>
-      <span class="tog op" id="tog-${b.id}">▼</span>`;
+    hd.innerHTML=`<div class="bld-name">${b.name}</div><span class="bdg bdg-r" id="bdg-${b.id}">${bk.length} 項待查</span><span class="tog op" id="tog-${b.id}">▼</span>`;
     const body=document.createElement('div');body.id='body-'+b.id;
     const pb=document.createElement('div');pb.className='pbr';
     pb.innerHTML=`<div class="pbf" id="pb-${b.id}" style="width:0%"></div>`;
     body.appendChild(pb);
-
     if(b.cats.some(c=>c.cat==='stair')){
       const leg=document.createElement('div');leg.className='legend';
-      leg.innerHTML=`<div class="leg-i"><span style="color:var(--c-orange);font-weight:700;font-size:14px">▶</span>&nbsp;原有缺失，重點確認</div>
-        <div class="leg-i"><span style="color:var(--c-text3)">□</span>&nbsp;全面清查格</div>`;
+      leg.innerHTML=`<div class="leg-i"><span style="color:var(--c-orange);font-weight:700;font-size:14px">▶</span>&nbsp;原有缺失，重點確認</div><div class="leg-i"><span style="color:var(--c-text3)">□</span>&nbsp;全面清查格</div>`;
       body.appendChild(leg);
     }
-
     b.cats.forEach((cg,ci)=>{
       const c=CATS[cg.cat];
       const chd=document.createElement('div');chd.className='cat-hd';
-      chd.innerHTML=`<div class="cat-ico" style="background:${c.bg}">${c.ico}</div>
-        <span class="cat-name">${c.name}</span>
-        <span class="cat-law">${c.law}</span>`;
+      chd.innerHTML=`<div class="cat-ico" style="background:${c.bg}">${c.ico}</div><span class="cat-name">${c.name}</span><span class="cat-law">${c.law}</span>`;
       body.appendChild(chd);
       const grid=document.createElement('div');grid.className='grid';
       cg.items.forEach((it,ii)=>{
@@ -542,39 +520,27 @@ function render(){
       });
       body.appendChild(grid);
     });
-
     card.appendChild(hd);card.appendChild(body);con.appendChild(card);
-
     hd.addEventListener('click',()=>{
       const open=body.style.display!=='none';
       body.style.display=open?'none':'';
       document.getElementById('tog-'+b.id).className='tog'+(open?'':' op');
     });
   });
-
-  // restore saved state
   loadChk();
   allKeys.forEach(k=>{
     const cb=document.querySelector('input[data-key="'+k+'"]');
     const cell=document.getElementById('cell-'+k);
     if(cb&&chk[k]){cb.checked=true;if(cell)cell.className='cell done';}
   });
-
-  // appendix 介面顯示
   const appCard=document.createElement('div');appCard.className='app-card';
   appCard.innerHTML=`<div class="app-title">附錄：法源依據對照表<div class="app-sub">各類消防設備對應法規條文與修繕標準</div></div>`;
   LAWS.forEach(law=>{
     const item=document.createElement('div');item.className='law-item';
-    item.innerHTML=`<div class="law-head">
-        <div class="law-ico" style="background:${law.bg}">${law.ico}</div>
-        <div class="law-name">${law.name}${law.sev?'<span class="tag tag-r">優先</span>':''}</div>
-      </div>
-      <div class="law-ref">${law.ref}</div>
-      <div class="law-plain"><div class="law-plain-label">修繕原因標準</div>${law.plain}</div>`;
+    item.innerHTML=`<div class="law-head"><div class="law-ico" style="background:${law.bg}">${law.ico}</div><div class="law-name">${law.name}${law.sev?'<span class="tag tag-r">優先</span>':''}</div></div><div class="law-ref">${law.ref}</div><div class="law-plain"><div class="law-plain-label">修繕原因標準</div>${law.plain}</div>`;
     appCard.appendChild(item);
   });
   con.appendChild(appCard);
-
   con.addEventListener('change',e=>{
     if(e.target.type==='checkbox'){
       const k=e.target.dataset.key;
@@ -587,7 +553,6 @@ function render(){
   });
   updStats();
 }
-
 render();
 </script>
 </body>

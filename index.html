@@ -357,9 +357,11 @@ body{background:var(--c-bg3);color:var(--c-text);font-family:-apple-system,Blink
           <button id="als-btn" class="lux-btn" style="width:100%;justify-content:center" onclick="toggleALS()">啟動手機感光</button>
           <div id="als-status" class="lux-status" style="margin-top:6px">未啟動</div>
           <div class="lux-tip" style="margin-top:8px;font-size:11px">
-            若顯示「不支援」，請在 Chrome 網址列前往
-            <b>chrome://flags/#enable-generic-sensor-extra-classes</b>
-            → 設為 Enabled → 重新整理。<br>
+            若顯示「不支援」，請複製下方網址貼入 Chrome 網址列，將選項設為 <b>Enabled</b> 後重新整理頁面：<br>
+            <div style="display:flex;align-items:center;gap:6px;margin-top:6px;flex-wrap:wrap">
+              <code id="als-flag-url" style="font-size:11px;background:#f1f5f9;padding:4px 8px;border-radius:6px;word-break:break-all;flex:1">chrome://flags/#enable-generic-sensor-extra-classes</code>
+              <button onclick="copyALSFlag(this)" style="flex-shrink:0;padding:4px 10px;border-radius:6px;border:1px solid var(--c-border);background:var(--c-card);cursor:pointer;font-size:12px">複製</button>
+            </div>
             部分 Android 版本已移除此 flag，此時請改用上方手動輸入。
           </div>
         </div>
@@ -1005,6 +1007,19 @@ function switchLuxTab(tab){
 }
 
 // ── Built-in phone ALS (AmbientLightSensor API) ─────────────────────────────
+function copyALSFlag(btn){
+  navigator.clipboard.writeText('chrome://flags/#enable-generic-sensor-extra-classes')
+    .then(()=>{ btn.textContent='已複製 ✓'; setTimeout(()=>btn.textContent='複製',2000); })
+    .catch(()=>{
+      // fallback for older browsers
+      const el=document.getElementById('als-flag-url');
+      const range=document.createRange(); range.selectNode(el);
+      window.getSelection().removeAllRanges(); window.getSelection().addRange(range);
+      document.execCommand('copy');
+      btn.textContent='已複製 ✓'; setTimeout(()=>btn.textContent='複製',2000);
+    });
+}
+
 function applyManualLux(){
   const v = parseFloat(document.getElementById('als-manual-val').value);
   if(isNaN(v)||v<0){ alert('請輸入有效的 lux 數值'); return; }

@@ -1026,6 +1026,21 @@ function shouldInclude(key, status){
   return true;
 }
 
+function updReportStats(){
+  const c=calcCnt();
+  const set=e=>{const el=document.getElementById(e[0]);if(el)el.textContent=e[1];};
+  [['rfc-all', allKeys.length-reportHidden.size],
+   ['rfc-issues', c.repair+c.recheck],
+   ['rfc-repair', c.repair],
+   ['rfc-recheck', c.recheck],
+   ['rfc-active', c.repair+c.recheck+c.pending],
+   ['rms-repair', c.repair],
+   ['rms-recheck', c.recheck],
+   ['rms-done', c.done],
+   ['rms-ok', c.ok],
+   ['rms-pending', c.pending]].forEach(set);
+}
+
 function delReportItem(key){
   reportHidden.add(key);
   const el=document.querySelector(`.report-item[data-rkey="${key}"]`);
@@ -1035,6 +1050,7 @@ function delReportItem(key){
     const visible=sec.querySelectorAll('.report-item:not([style*="none"])');
     sec.style.display=visible.length?'':'none';
   });
+  updReportStats();
 }
 
 function filterReport(mode){
@@ -1049,6 +1065,18 @@ function filterReport(mode){
     const vis=[...sec.querySelectorAll('.report-item[data-rkey]')].some(el=>el.style.display!=='none');
     sec.style.display=vis?'':'none';
   });
+  updReportStats();
+}
+
+function calcCnt(){
+  // Count only items not hidden and matching current filter
+  const c={repair:0,recheck:0,done:0,ok:0,pending:0};
+  allKeys.forEach(k=>{
+    const s=chk[k]||'';
+    if(!shouldInclude(k,s))return;
+    if(c[s]!==undefined)c[s]++; else c.pending++;
+  });
+  return c;
 }
 
 function openReport(){
@@ -1056,19 +1084,18 @@ function openReport(){
   reportFilter='all';
   const now=new Date();
   const ts=now.getFullYear()+'/'+(now.getMonth()+1).toString().padStart(2,'0')+'/'+now.getDate().toString().padStart(2,'0')+' '+now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0');
-  const cnt={repair:0,recheck:0,done:0,ok:0,pending:0};
-  allKeys.forEach(k=>{const s=chk[k]||'';if(cnt[s]!==undefined)cnt[s]++;else cnt.pending++;});
+  const cnt=calcCnt();
 
-  const filterBar=`<div class="report-filters">
-    <button class="rf-btn active" data-f="all"     onclick="filterReport('all')"    >全部<span class="rf-count">${allKeys.length}</span></button>
-    <button class="rf-btn"        data-f="issues"   onclick="filterReport('issues')"  >有問題<span class="rf-count">${cnt.repair+cnt.recheck}</span></button>
-    <button class="rf-btn"        data-f="repair"   onclick="filterReport('repair')"  >需修繕<span class="rf-count">${cnt.repair}</span></button>
-    <button class="rf-btn"        data-f="recheck"  onclick="filterReport('recheck')" >待複查<span class="rf-count">${cnt.recheck}</span></button>
-    <button class="rf-btn"        data-f="active"   onclick="filterReport('active')"  >排除已完成<span class="rf-count">${cnt.repair+cnt.recheck+cnt.pending}</span></button>
+  const filterBar=`<div class="report-filters" id="rpt-filter-bar">
+    <button class="rf-btn active" data-f="all"     onclick="filterReport('all')"    >全部<span class="rf-count" id="rfc-all">${allKeys.length}</span></button>
+    <button class="rf-btn"        data-f="issues"   onclick="filterReport('issues')"  >有問題<span class="rf-count" id="rfc-issues">${cnt.repair+cnt.recheck}</span></button>
+    <button class="rf-btn"        data-f="repair"   onclick="filterReport('repair')"  >需修繕<span class="rf-count" id="rfc-repair">${cnt.repair}</span></button>
+    <button class="rf-btn"        data-f="recheck"  onclick="filterReport('recheck')" >待複查<span class="rf-count" id="rfc-recheck">${cnt.recheck}</span></button>
+    <button class="rf-btn"        data-f="active"   onclick="filterReport('active')"  >排除已完成<span class="rf-count" id="rfc-active">${cnt.repair+cnt.recheck+cnt.pending}</span></button>
   </div>`;
 
   const communityLine = meta.community ? `<br>社區檢查人：${meta.community}` : '';
-  let html=filterBar+`<div class="report-meta">巡查日期：${meta.date}<br>廠商人員：${meta.vendor}${communityLine}<br>輸出時間：${ts}<br>需修繕：${cnt.repair}項　待複查：${cnt.recheck}項　已完修：${cnt.done}項　正常：${cnt.ok}項　待確認：${cnt.pending}項<br>地點：新北市汐止區福德一路56號</div>`;
+  let html=filterBar+`<div class="report-meta" id="rpt-meta-stats">巡查日期：${meta.date}<br>廠商人員：${meta.vendor}${communityLine}<br>輸出時間：${ts}<br>需修繕：<b id="rms-repair">${cnt.repair}</b>項　待複查：<b id="rms-recheck">${cnt.recheck}</b>項　已完修：<b id="rms-done">${cnt.done}</b>項　正常：<b id="rms-ok">${cnt.ok}</b>項　待確認：<b id="rms-pending">${cnt.pending}</b>項<br>地點：新北市汐止區福德一路56號</div>`;
 
   BLDS.forEach((b)=>{
     const bkeys=allKeys.filter(k=>k.startsWith(b.id+'|'));
@@ -1108,8 +1135,7 @@ function bgClick(e){if(e.target===document.getElementById('modal-bg'))closeRepor
 function printReportToPDF(){
   const now=new Date();
   const ts=now.getFullYear()+'/'+(now.getMonth()+1).toString().padStart(2,'0')+'/'+now.getDate().toString().padStart(2,'0')+' '+now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0');
-  const cnt={repair:0,recheck:0,done:0,ok:0,pending:0};
-  allKeys.forEach(k=>{const s=chk[k]||'';if(cnt[s]!==undefined)cnt[s]++;else cnt.pending++;});
+  const cnt=calcCnt();
   let html=`<div class="print-header"><h1>伊登花園 消防設備缺失複查報告書</h1>
     <div class="print-meta"><span><strong>巡查日期：</strong>${meta.date}</span><span><strong>輸出時間：</strong>${ts}</span></div>
     <div class="print-meta"><span><strong>社區地點：</strong>新北市汐止區福德一路56號</span><span><strong>廠商人員：</strong>${meta.vendor}</span>${meta.community?`<span><strong>社區檢查人：</strong>${meta.community}</span>`:''}</div>
@@ -1234,8 +1260,7 @@ function printReportToPDF(){
 function copyReport(){
   const now=new Date();
   const ts=now.getFullYear()+'/'+(now.getMonth()+1).toString().padStart(2,'0')+'/'+now.getDate().toString().padStart(2,'0');
-  const cnt={repair:0,recheck:0,done:0,ok:0,pending:0};
-  allKeys.forEach(k=>{const s=chk[k]||'';if(cnt[s]!==undefined)cnt[s]++;else cnt.pending++;});
+  const cnt=calcCnt();
   let txt='【伊登花園消防缺失複查報告】\n巡查日期：'+meta.date+'　輸出：'+ts+'\n廠商人員：'+meta.vendor+(meta.community?'　社區檢查人：'+meta.community:'')+'\n';
   txt+=`需修繕：${cnt.repair}　待複查：${cnt.recheck}　已完修：${cnt.done}　正常：${cnt.ok}　待確認：${cnt.pending}\n━━━━━━━━━━━━━━\n`;
   BLDS.forEach(b=>{

@@ -98,6 +98,21 @@ body{background:var(--c-bg3);color:var(--c-text);font-family:-apple-system,Blink
 .cell-txt{font-size:12px;color:var(--c-text);line-height:1.4;flex:1}
 .dm{font-size:13px;font-weight:700;color:var(--c-orange);flex-shrink:0;line-height:1.5}
 .sev-h{display:inline-block;font-size:10px;background:var(--c-red-bg);color:var(--c-red);border-radius:3px;padding:0 4px;margin-left:2px}
+/* Cell delete (✕) button */
+.cell-del{position:absolute;top:3px;right:3px;background:none;border:none;color:var(--c-border2);font-size:10px;cursor:pointer;padding:2px 4px;line-height:1;border-radius:3px;-webkit-tap-highlight-color:transparent;z-index:2}
+.cell-del:active{color:var(--c-red);background:var(--c-red-bg)}
+.cell.custom-cell{border-left:3px solid var(--c-blue)}
+/* Category add (＋) button */
+.cat-add-btn{background:none;border:1px solid var(--c-border2);color:var(--c-blue);font-size:11px;border-radius:5px;padding:1px 6px;cursor:pointer;flex-shrink:0;-webkit-tap-highlight-color:transparent;line-height:1.5}
+.cat-add-btn:active{background:var(--c-blue-bg)}
+/* Main grid add form */
+.main-add-form{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:7px 12px;background:var(--c-blue-bg);border-bottom:1px solid var(--c-border)}
+.main-add-form input{flex:1;min-width:120px;font-size:12px;padding:4px 8px;border:1px solid var(--c-border2);border-radius:6px;background:var(--c-bg);color:var(--c-text);outline:none}
+.main-add-form .ma-lbl{font-size:11px;color:var(--c-blue);font-weight:600;white-space:nowrap}
+.main-add-form .ma-ok{font-size:11px;padding:4px 10px;border-radius:6px;border:none;background:var(--c-blue);color:#fff;cursor:pointer;font-weight:600}
+.main-add-form .ma-cancel{font-size:11px;padding:4px 10px;border-radius:6px;border:1px solid var(--c-border2);background:var(--c-bg3);color:var(--c-text2);cursor:pointer}
+/* Stats fire system section */
+.stats-sys-hd{background:var(--c-red-bg);color:var(--c-red);font-weight:700;font-size:12px;padding:7px 12px;border-radius:7px;margin:10px 0 2px;display:flex;align-items:center;gap:6px}
 
 /* Status badge — tap target */
 .st{min-width:22px;height:auto;padding:3px 6px;border-radius:5px;font-size:11px;font-weight:700;display:inline-flex;align-items:center;white-space:nowrap;flex-shrink:0;user-select:none;line-height:1.3}
@@ -619,6 +634,11 @@ function cycleStatus(key){
   const cur = chk[key]||'';
   const next = STATUS_CYCLE[(STATUS_CYCLE.indexOf(cur)+1)%STATUS_CYCLE.length];
   chk[key] = next;
+  // Sync custom item status
+  if(key.startsWith('cust_')){
+    const ci=customItems.find(c=>c.id===key.slice(5));
+    if(ci){ci.status=next; saveCustom();}
+  }
   // Update badge
   const badge = document.getElementById('st-'+key);
   if(badge){ badge.textContent=STATUS_MARK[next]; badge.className='st '+STATUS_CLS[next]; }
@@ -753,14 +773,18 @@ let chk = {}; // {key: '' | 'ok' | 'recheck' | 'repair' | 'done'}
 let ext = {}; // {extKey: {exp:string, pressure:boolean}}
 let luxData = {}; // {key: number}  — measured lux per item
 let allKeys = [];
-let customItems = []; // [{id,cat,bid,bldName,label,status}] — user-added items in stats
+let customItems = []; // [{id,cat,bid,bldName,label,status}] — user-added items
 let statsHidden = new Set(); // keys hidden in current stats session
 let _statsExpanded = new Set(); // which catKeys are expanded in stats modal
+let hiddenItems = new Set(); // keys hidden from main grid (persisted)
 const CUSTOM_KEY = 'fire_custom_v1';
+const HIDDEN_KEY = 'fire_hidden_v1';
 function mkKey(bid,ci,ii){ return bid+'|'+ci+'|'+ii }
 function mkExtKey(bid,fl){ return 'ext|'+bid+'|'+fl }
 function saveCustom(){ try{localStorage.setItem(CUSTOM_KEY,JSON.stringify(customItems));}catch(e){} }
 function loadCustom(){ try{const d=localStorage.getItem(CUSTOM_KEY);if(d)customItems=JSON.parse(d);}catch(e){} }
+function saveHidden(){ try{localStorage.setItem(HIDDEN_KEY,JSON.stringify([...hiddenItems]));}catch(e){} }
+function loadHidden(){ try{const d=localStorage.getItem(HIDDEN_KEY);if(d)hiddenItems=new Set(JSON.parse(d));}catch(e){} }
 
 // ── Lux spec per category (at 1 m: cd = lux numerically) ─────────────────────
 const LUX_SPEC = {
@@ -820,6 +844,7 @@ function onLuxChange(e){
 function updStats(){
   let repair=0,recheck=0,done=0,ok=0,pending=0;
   allKeys.forEach(k=>{
+    if(hiddenItems.has(k))return;
     const s=chk[k]||'';
     if(s==='repair')repair++;
     else if(s==='recheck')recheck++;
@@ -836,7 +861,7 @@ function updStats(){
   document.getElementById('s-pct').textContent=pct+'%';
   document.getElementById('pb-global').style.width=pct+'%';
   BLDS.forEach(b=>{
-    const bk=allKeys.filter(k=>k.startsWith(b.id+'|'));
+    const bk=allKeys.filter(k=>k.startsWith(b.id+'|')&&!hiddenItems.has(k));
     const bt=bk.length;
     const br=bk.filter(k=>chk[k]==='repair').length;
     const brc=bk.filter(k=>chk[k]==='recheck').length;
@@ -909,11 +934,16 @@ function render(){
   allKeys=[];
 
   BLDS.forEach(b=>{
-    const card=document.createElement('div');card.className='bld-card';
+    const card=document.createElement('div');card.className='bld-card';card.dataset.bid=b.id;
 
-    // Keys for this building
+    // Keys for this building (excluding hidden)
     const bk=[];
-    b.cats.forEach((cg,ci)=>cg.items.forEach((_,ii)=>bk.push(mkKey(b.id,ci,ii))));
+    b.cats.forEach((cg,ci)=>cg.items.forEach((_,ii)=>{
+      const k=mkKey(b.id,ci,ii);
+      if(!hiddenItems.has(k))bk.push(k);
+    }));
+    // Include custom items for this building
+    customItems.filter(c=>c.bid===b.id&&!hiddenItems.has('cust_'+c.id)).forEach(c=>bk.push('cust_'+c.id));
     bk.forEach(k=>allKeys.push(k));
 
     // Header
@@ -937,13 +967,21 @@ function render(){
     b.cats.forEach((cg,ci)=>{
       const c=CATS[cg.cat];
       const chd=document.createElement('div');chd.className='cat-hd';
-      chd.innerHTML=`<div class="cat-ico" style="background:${c.bg}">${c.ico}</div><span class="cat-name">${c.name}</span><span class="cat-law">${c.law}</span>`;
+      chd.innerHTML=`<div class="cat-ico" style="background:${c.bg}">${c.ico}</div><span class="cat-name">${c.name}</span><span class="cat-law" style="flex:1">${c.law}</span><button class="cat-add-btn" onclick="event.stopPropagation();openMainAdd('${b.id}','${cg.cat}','main-add-${b.id}-${ci}')" title="新增項目">＋</button>`;
       body.appendChild(chd);
+
+      // Add-form area
+      const addArea=document.createElement('div');
+      addArea.id='main-add-'+b.id+'-'+ci;
+      body.appendChild(addArea);
 
       const grid=document.createElement('div');grid.className='grid';
       const hasLux = !!LUX_SPEC[cg.cat];
+
+      // Regular items (skip hidden)
       cg.items.forEach((it,ii)=>{
         const k=mkKey(b.id,ci,ii);
+        if(hiddenItems.has(k)) return;
         const s=chk[k]||'';
         const cell=document.createElement('div');
         cell.id='cell-'+k;
@@ -952,23 +990,39 @@ function render(){
         cell.dataset.status=s;
         const mark=it.defect?'<span class="dm">&#9658;</span>':'';
         const sev=it.sev==='h'?'<span class="sev-h">優先</span>':'';
+        const delBtn=`<button class="cell-del" onclick="event.stopPropagation();delMainItem('${k}')" title="隱藏此項目">✕</button>`;
         if(hasLux){
           const lv = luxData[k];
           const resHtml = (lv !== undefined) ? luxResultStr(cg.cat, lv, it.label) : '<span class="lux-neu">—</span>';
           const spec = LUX_SPEC[cg.cat];
           const unitHint = spec.unit==='cd' ? 'lux→cd@1m' : 'lux';
           cell.innerHTML=`
-            <div class="cell-top"><span class="st ${STATUS_CLS[s]}" id="st-${k}">${STATUS_MARK[s]}</span>${mark}<span class="cell-txt">${it.label}${sev}</span></div>
+            <div class="cell-top"><span class="st ${STATUS_CLS[s]}" id="st-${k}">${STATUS_MARK[s]}</span>${mark}<span class="cell-txt">${it.label}${sev}</span>${delBtn}</div>
             <div class="cell-lux-row" onclick="event.stopPropagation()">
               <span class="cell-lux-lbl">${unitHint}</span>
               <input type="number" min="0" step="0.1" class="cell-lux-inp" id="lux-inp-${k}" placeholder="—" value="${lv !== undefined ? lv : ''}" inputmode="decimal" data-lkey="${k}" data-cat="${cg.cat}" data-label="${it.label.replace(/"/g,'&quot;')}" onchange="onLuxChange(event)">
               <span class="cell-lux-res" id="lux-res-${k}">${resHtml}</span>
             </div>`;
         } else {
-          cell.innerHTML=`<span class="st ${STATUS_CLS[s]}" id="st-${k}">${STATUS_MARK[s]}</span>${mark}<span class="cell-txt">${it.label}${sev}</span>`;
+          cell.innerHTML=`<span class="st ${STATUS_CLS[s]}" id="st-${k}">${STATUS_MARK[s]}</span>${mark}<span class="cell-txt">${it.label}${sev}</span>${delBtn}`;
         }
         grid.appendChild(cell);
       });
+
+      // Custom items for this building + category
+      customItems.filter(ci2=>ci2.bid===b.id&&ci2.cat===cg.cat&&!hiddenItems.has('cust_'+ci2.id)).forEach(ci2=>{
+        const k='cust_'+ci2.id;
+        const s=chk[k]||ci2.status||'';
+        const cell=document.createElement('div');
+        cell.id='cell-'+k;
+        cell.className='cell custom-cell';
+        cell.dataset.key=k;
+        cell.dataset.status=s;
+        const delBtn=`<button class="cell-del" onclick="event.stopPropagation();delMainItem('${k}')" title="隱藏此項目">✕</button>`;
+        cell.innerHTML=`<span class="st ${STATUS_CLS[s]}" id="st-${k}">${STATUS_MARK[s]}</span><span class="cell-txt">${ci2.label} <span style="font-size:9px;color:var(--c-blue);font-weight:600">[自訂]</span></span>${delBtn}`;
+        grid.appendChild(cell);
+      });
+
       body.appendChild(grid);
     });
 
@@ -1089,6 +1143,60 @@ function shouldInclude(key, status){
   return true;
 }
 
+// ── Main grid item hide + add ─────────────────────────────────────────────────
+function delMainItem(key){
+  hiddenItems.add(key);
+  saveHidden();
+  const cell=document.getElementById('cell-'+key);
+  if(cell) cell.style.display='none';
+  // Remove from allKeys so stats are correct
+  const idx=allKeys.indexOf(key);
+  if(idx>-1) allKeys.splice(idx,1);
+  updStats();
+}
+
+function openMainAdd(bid, catKey, areaId){
+  // Close existing
+  document.querySelectorAll('.main-add-form').forEach(f=>f.remove());
+  const area=document.getElementById(areaId);
+  if(!area) return;
+  const div=document.createElement('div');
+  div.className='main-add-form';
+  div.id='maf-'+areaId;
+  div.innerHTML=`<span class="ma-lbl">＋ 新增項目</span>
+    <input type="text" id="mai-${areaId}" placeholder="項目說明，例：5F 出口燈故障">
+    <button class="ma-ok" onclick="confirmMainAdd('${bid}','${catKey}','${areaId}')">新增</button>
+    <button class="ma-cancel" onclick="document.getElementById('maf-${areaId}')?.remove()">取消</button>`;
+  area.appendChild(div);
+  setTimeout(()=>document.getElementById('mai-'+areaId)?.focus(), 50);
+}
+
+function confirmMainAdd(bid, catKey, areaId){
+  const inp=document.getElementById('mai-'+areaId);
+  if(!inp) return;
+  const label=inp.value.trim();
+  if(!label){inp.style.borderColor='var(--c-red)';inp.focus();return;}
+  const bld=BLDS.find(b=>b.id===bid);
+  const bldName=bld?bld.name:bid;
+  const id=Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+  customItems.push({id, cat:catKey, bid, bldName, label, status:''});
+  saveCustom();
+  document.getElementById('maf-'+areaId)?.remove();
+  // Re-render this building's section by full render (preserving expanded state)
+  const openBids=new Set();
+  document.querySelectorAll('.bld-card[data-bid]').forEach(card=>{
+    const body=document.getElementById('body-'+card.dataset.bid);
+    if(body&&body.style.display!=='none') openBids.add(card.dataset.bid);
+  });
+  render();
+  openBids.forEach(id=>{
+    const body=document.getElementById('body-'+id);
+    const tog=document.getElementById('tog-'+id);
+    if(body){body.style.display='block';}
+    if(tog){tog.classList.add('op');}
+  });
+}
+
 // ── Report item inline edit ────────────────────────────────────────────────────
 const SO_CLS={'':'so-pending','ok':'so-ok','recheck':'so-recheck','repair':'so-repair','done':'so-done'};
 
@@ -1175,9 +1283,10 @@ function filterReport(mode){
 }
 
 function calcCnt(){
-  // Count only items not hidden and matching current filter
+  // Count only items not hidden (from main grid) and not in report filter
   const c={repair:0,recheck:0,done:0,ok:0,pending:0};
   allKeys.forEach(k=>{
+    if(hiddenItems.has(k))return;
     const s=chk[k]||'';
     if(!shouldInclude(k,s))return;
     if(c[s]!==undefined)c[s]++; else c.pending++;
@@ -1533,6 +1642,54 @@ function renderStatsHTML(stats){
       <span class="stats-pill sp-g">已完修 ${dn}　正常 ${ok}</span>
     </div>`;
 
+  // ── 全區消防系統 dedicated block ─────────────────────────────────────────────
+  const sysItems=[];
+  const sysBld=BLDS.find(b=>b.id==='sys');
+  if(sysBld){
+    sysBld.cats.forEach((cg,ci)=>{
+      const c=CATS[cg.cat];
+      cg.items.forEach((it,ii)=>{
+        const k=mkKey('sys',ci,ii);
+        if(hiddenItems.has(k)||statsHidden.has(k)) return;
+        const s=chk[k]||'';
+        sysItems.push({catKey:cg.cat, catName:c.name, catIco:c.ico, label:it.label, status:s, key:k});
+      });
+    });
+    // Custom items for sys building
+    customItems.filter(c=>c.bid==='sys'&&!hiddenItems.has('cust_'+c.id)&&!statsHidden.has('cust_'+c.id)).forEach(ci=>{
+      const c=CATS[ci.cat]||{name:ci.cat,ico:'📌'};
+      sysItems.push({catKey:ci.cat, catName:c.name, catIco:c.ico, label:ci.label, status:ci.status||'', key:'cust_'+ci.id, isCustom:true, customId:ci.id});
+    });
+  }
+  if(sysItems.length>0){
+    h+=`<div class="stats-sys-hd">🔥 全區消防系統　共 ${sysItems.length} 項　
+      ${sysItems.filter(x=>x.status==='repair').length>0?`<span class="stats-pill sp-r">需修繕 ${sysItems.filter(x=>x.status==='repair').length}</span>`:''}
+      ${sysItems.filter(x=>x.status==='recheck').length>0?`<span class="stats-pill sp-a">待複查 ${sysItems.filter(x=>x.status==='recheck').length}</span>`:''}
+      <button class="sa-btn sa-btn-ok" style="padding:2px 7px;font-size:10px;margin-left:auto"
+        onclick="statsOpenAdd('pump')">＋</button>
+    </div>`;
+    h+=`<div id="stats-add-area-sys-fire"></div>`;
+    h+=`<table class="stats-detail-tbl"><thead><tr>
+      <th width="18%">設備類型</th><th width="47%">項目名稱</th><th width="20%">狀態</th><th width="15%">操作</th>
+    </tr></thead><tbody>`;
+    sysItems.forEach(item=>{
+      const sc=item.status==='repair'?'sp-r':item.status==='recheck'?'sp-a':item.status==='done'||item.status==='ok'?'sp-g':'sp-b';
+      const bold=item.status==='repair'||item.status==='recheck';
+      const custTag=item.isCustom?` <span style="font-size:9px;color:var(--c-blue)">[自訂]</span>`:'';
+      const delFn=item.isCustom?`statsDelCustom('${_sk(item.customId)}')`:`statsDelItem('${_sk(item.key)}')`;
+      h+=`<tr class="stats-body-row" data-skey="${item.key}" style="${item.isCustom?'background:var(--c-blue-bg)':''}">
+        <td style="font-size:11px;color:var(--c-text2)">${item.catIco} ${item.catName}</td>
+        <td style="${bold?'font-weight:600':''}">${item.label}${custTag}</td>
+        <td><span class="stats-pill ${sc}" data-sbadge="${item.key}">${STATUS_LABEL[item.status]}</span></td>
+        <td style="text-align:center;white-space:nowrap">
+          <button class="ri-edit-btn-ico" onclick="statsEditItem('${_sk(item.key)}')" title="修改狀態">✎</button>
+          <button class="ri-edit-btn-ico" onclick="${delFn}" title="移除" style="color:var(--c-red)">✕</button>
+        </td>
+      </tr>`;
+    });
+    h+=`</tbody></table>`;
+  }
+
   stats.forEach(row=>{
     const expanded = _statsExpanded.has(row.catKey) || CATS_ITEM_DETAIL.has(row.catKey);
     h+=`<div class="stats-cat-hd" id="stats-hdr-${row.catKey}" onclick="statsToggle('${row.catKey}')">
@@ -1700,6 +1857,43 @@ function printStatsToPDF(){
     <div class="print-meta"><span>缺失項目共 ${total} 項　需修繕 ${totalRepair} 項　待複查 ${totalRecheck} 項</span><span><strong>輸出時間：</strong>${ts}</span></div>
   </div>`;
 
+  // ── 全區消防系統 dedicated section in PDF ──────────────────────────────────────
+  const pdfSysItems=[];
+  const pdfSysBld=BLDS.find(b=>b.id==='sys');
+  if(pdfSysBld){
+    pdfSysBld.cats.forEach((cg,ci)=>{
+      const c=CATS[cg.cat];
+      cg.items.forEach((it,ii)=>{
+        const k=mkKey('sys',ci,ii);
+        if(hiddenItems.has(k)) return;
+        const s=chk[k]||'';
+        pdfSysItems.push({catIco:c.ico, catName:c.name, label:it.label, status:s, isCustom:false});
+      });
+    });
+    customItems.filter(c=>c.bid==='sys'&&!hiddenItems.has('cust_'+c.id)).forEach(ci=>{
+      const c=CATS[ci.cat]||{name:ci.cat,ico:'📌'};
+      pdfSysItems.push({catIco:c.ico, catName:c.name, label:ci.label, status:ci.status||'', isCustom:true});
+    });
+  }
+  if(pdfSysItems.length>0){
+    const sysRep=pdfSysItems.filter(x=>x.status==='repair').length;
+    const sysRec=pdfSysItems.filter(x=>x.status==='recheck').length;
+    html+=`<div class="print-bld-section">
+      <div class="print-bld-title" style="background:#A32D2D;color:#fff">🔥 全區消防系統　共 ${pdfSysItems.length} 項${sysRep>0?'　需修繕 '+sysRep+' 項':''}${sysRec>0?'　待複查 '+sysRec+' 項':''}</div>
+      <table class="print-table"><thead>
+        <tr><th width="20%">設備類型</th><th width="55%">項目名稱</th><th width="5%"></th><th width="20%">狀態</th></tr>
+      </thead><tbody>`;
+    pdfSysItems.forEach(item=>{
+      const sc=item.status==='repair'?'print-status-repair':item.status==='recheck'?'print-status-recheck':item.status==='done'||item.status==='ok'?'print-status-ok':'print-status-pending';
+      html+=`<tr style="${item.status==='repair'||item.status==='recheck'?'font-weight:700':''}">
+        <td style="font-size:11px">${item.catIco} ${item.catName}</td>
+        <td>${item.label}${item.isCustom?' <em style="font-size:9px;color:#185FA5">[自訂]</em>':''}</td>
+        <td></td><td class="${sc}">${STATUS_LABEL[item.status]}</td>
+      </tr>`;
+    });
+    html+=`</tbody></table></div>`;
+  }
+
   // Summary overview table
   html+=`<div class="print-bld-section">
     <div class="print-bld-title" style="background:#185FA5;color:#fff">📊 各類別缺失彙總</div>
@@ -1789,7 +1983,7 @@ function printStatsToPDF(){
 
 function confirmReset(){
   if(confirm('確定要重置所有勾選與滅火器查核記錄嗎？此操作無法復原。')){
-    chk={};ext={};luxData={};customItems=[];saveChk();saveExt();saveLux();saveCustom();
+    chk={};ext={};luxData={};customItems=[];hiddenItems=new Set();saveChk();saveExt();saveLux();saveCustom();saveHidden();
     document.getElementById('content').innerHTML='';
     allKeys=[];
     render();
@@ -1800,9 +1994,10 @@ function confirmReset(){
 // ── Export / Import ───────────────────────────────────────────────────────────
 function exportData(){
   const payload = {
-    version: 3,
+    version: 4,
     exportTime: new Date().toISOString(),
-    meta, chk, ext, luxData, customItems
+    meta, chk, ext, luxData, customItems,
+    hiddenItems: [...hiddenItems]
   };
   const json = JSON.stringify(payload, null, 2);
   const blob = new Blob([json], {type:'application/json'});
@@ -1839,10 +2034,11 @@ function importFromPaste(){
   if(!raw){ msg.style.color='var(--c-red)'; msg.textContent='請貼上 JSON 內容或選擇檔案'; return; }
   try{
     const d = JSON.parse(raw);
-    if(d.chk)        { chk         = d.chk;         saveChk(); }
-    if(d.ext)        { ext         = d.ext;         saveExt(); }
-    if(d.luxData)    { luxData     = d.luxData;     saveLux(); }
-    if(d.customItems){ customItems = d.customItems; saveCustom(); }
+    if(d.chk)        { chk         = d.chk;                  saveChk(); }
+    if(d.ext)        { ext         = d.ext;                  saveExt(); }
+    if(d.luxData)    { luxData     = d.luxData;              saveLux(); }
+    if(d.customItems){ customItems = d.customItems;          saveCustom(); }
+    if(d.hiddenItems){ hiddenItems = new Set(d.hiddenItems); saveHidden(); }
     if(d.meta)  {
       meta = Object.assign(meta, d.meta);
       try{ localStorage.setItem(META_KEY, JSON.stringify(meta)); }catch(err){}
@@ -2337,6 +2533,7 @@ loadExt();
 loadLux();
 loadMeta();
 loadCustom();
+loadHidden();
 render();
 </script>
 </body>

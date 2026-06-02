@@ -1736,6 +1736,8 @@ function renderStatsHTML(stats){
     if(row.done>0)    h+=`<span class="stats-pill sp-g" data-sc="done">${row.done}</span>`;
     h+=`<button class="sa-btn sa-btn-ok" style="padding:2px 7px;font-size:10px;margin-left:4px"
         onclick="event.stopPropagation();statsOpenAdd('${row.catKey}')">＋</button>`;
+    h+=`<button class="sa-btn" style="padding:2px 7px;font-size:12px;margin-left:2px;background:none;border:1px solid var(--c-border2);color:var(--c-red);border-radius:5px;cursor:pointer"
+        onclick="event.stopPropagation();statsDelCat('${row.catKey}')" title="刪除整個類別">🗑</button>`;
     h+=`</div>`;
 
     // Add-item form area
@@ -1833,6 +1835,39 @@ function statsDelCustom(id){
   document.querySelectorAll('.stats-body-row').forEach(r=>{ if(r.getAttribute('data-skey')===key) r.style.display='none'; });
   document.querySelectorAll('.stats-edit-tr').forEach(r=>r.remove());
   refreshSysHdrCount();
+}
+
+function statsDelCat(catKey){
+  const catName=CATS[catKey]?.name||catKey;
+  if(!confirm(`確定要將「${catName}」整個類別從清單及報告完全移除？\n（如需恢復，請重置所有）`)) return;
+  // Hide all built-in items in this category across all buildings
+  BLDS.forEach(b=>{
+    b.cats.forEach((cg,ci)=>{
+      if(cg.cat!==catKey) return;
+      cg.items.forEach((_,ii)=>{
+        const k=mkKey(b.id,ci,ii);
+        hiddenItems.add(k);
+        const idx=allKeys.indexOf(k);
+        if(idx>-1) allKeys.splice(idx,1);
+        // Also hide corresponding main grid cell
+        const cell=document.getElementById('cell-'+k);
+        if(cell) cell.style.display='none';
+      });
+    });
+  });
+  // Remove all custom items for this category
+  customItems=customItems.filter(c=>c.cat!==catKey);
+  saveHidden();
+  saveCustom();
+  updStats();
+  // Hide the category section in stats modal
+  const hd=document.getElementById('stats-hdr-'+catKey);
+  const sec=document.getElementById('stats-sec-'+catKey);
+  const addArea=document.getElementById('stats-add-area-'+catKey);
+  if(hd) hd.style.display='none';
+  if(sec) sec.style.display='none';
+  if(addArea) addArea.style.display='none';
+  document.querySelectorAll('.stats-edit-tr,.stats-add-form').forEach(e=>e.remove());
 }
 
 function refreshSysHdrCount(){

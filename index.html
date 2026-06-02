@@ -98,9 +98,9 @@ body{background:var(--c-bg3);color:var(--c-text);font-family:-apple-system,Blink
 .cell-txt{font-size:12px;color:var(--c-text);line-height:1.4;flex:1}
 .dm{font-size:13px;font-weight:700;color:var(--c-orange);flex-shrink:0;line-height:1.5}
 .sev-h{display:inline-block;font-size:10px;background:var(--c-red-bg);color:var(--c-red);border-radius:3px;padding:0 4px;margin-left:2px}
-/* Cell delete (✕) button */
-.cell-del{position:absolute;top:3px;right:3px;background:none;border:none;color:var(--c-border2);font-size:10px;cursor:pointer;padding:2px 4px;line-height:1;border-radius:3px;-webkit-tap-highlight-color:transparent;z-index:2}
-.cell-del:active{color:var(--c-red);background:var(--c-red-bg)}
+/* Cell delete button */
+.cell-del{position:absolute;top:3px;right:3px;background:none;border:none;color:var(--c-border2);font-size:12px;cursor:pointer;padding:2px 4px;line-height:1;border-radius:3px;-webkit-tap-highlight-color:transparent;z-index:2;opacity:.55}
+.cell-del:active,.cell-del:hover{opacity:1;color:var(--c-red);background:var(--c-red-bg)}
 .cell.custom-cell{border-left:3px solid var(--c-blue)}
 /* Category add (＋) button */
 .cat-add-btn{background:none;border:1px solid var(--c-border2);color:var(--c-blue);font-size:11px;border-radius:5px;padding:1px 6px;cursor:pointer;flex-shrink:0;-webkit-tap-highlight-color:transparent;line-height:1.5}
@@ -990,7 +990,7 @@ function render(){
         cell.dataset.status=s;
         const mark=it.defect?'<span class="dm">&#9658;</span>':'';
         const sev=it.sev==='h'?'<span class="sev-h">優先</span>':'';
-        const delBtn=`<button class="cell-del" onclick="event.stopPropagation();delMainItem('${k}')" title="隱藏此項目">✕</button>`;
+        const delBtn=`<button class="cell-del" onclick="event.stopPropagation();delMainItem('${k}')" title="從清單及報告移除">🗑</button>`;
         if(hasLux){
           const lv = luxData[k];
           const resHtml = (lv !== undefined) ? luxResultStr(cg.cat, lv, it.label) : '<span class="lux-neu">—</span>';
@@ -1018,7 +1018,7 @@ function render(){
         cell.className='cell custom-cell';
         cell.dataset.key=k;
         cell.dataset.status=s;
-        const delBtn=`<button class="cell-del" onclick="event.stopPropagation();delMainItem('${k}')" title="隱藏此項目">✕</button>`;
+        const delBtn=`<button class="cell-del" onclick="event.stopPropagation();delMainItem('${k}')" title="從清單及報告移除">🗑</button>`;
         cell.innerHTML=`<span class="st ${STATUS_CLS[s]}" id="st-${k}">${STATUS_MARK[s]}</span><span class="cell-txt">${ci2.label} <span style="font-size:9px;color:var(--c-blue);font-weight:600">[自訂]</span></span>${delBtn}`;
         grid.appendChild(cell);
       });
@@ -1145,11 +1145,19 @@ function shouldInclude(key, status){
 
 // ── Main grid item hide + add ─────────────────────────────────────────────────
 function delMainItem(key){
-  hiddenItems.add(key);
-  saveHidden();
+  const isCustom=key.startsWith('cust_');
+  const msg=isCustom?'刪除此自訂項目？':'將此缺失項目從清單及報告中完全移除？\n（如需恢復，請重置所有）';
+  if(!confirm(msg)) return;
+  if(isCustom){
+    const id=key.slice(5);
+    customItems=customItems.filter(c=>c.id!==id);
+    saveCustom();
+  } else {
+    hiddenItems.add(key);
+    saveHidden();
+  }
   const cell=document.getElementById('cell-'+key);
   if(cell) cell.style.display='none';
-  // Remove from allKeys so stats are correct
   const idx=allKeys.indexOf(key);
   if(idx>-1) allKeys.splice(idx,1);
   updStats();
@@ -1842,17 +1850,39 @@ function renderSysItemRows(items){
     const sc=item.status==='repair'?'sp-r':item.status==='recheck'?'sp-a':item.status==='done'||item.status==='ok'?'sp-g':'sp-b';
     const bold=item.status==='repair'||item.status==='recheck';
     const custTag=item.isCustom?` <span style="font-size:9px;color:var(--c-blue)">[自訂]</span>`:'';
-    const delFn=item.isCustom?`statsDelCustom('${_sk(item.customId)}')`:`statsDelItem('${_sk(item.key)}')`;
+    // Custom items: permanently delete; built-in items: permanently hide from main grid + report
+    const delFn=item.isCustom
+      ? `sysPermaDel('${_sk(item.key)}','${_sk(item.customId)}')`
+      : `sysPermaDel('${_sk(item.key)}',null)`;
     return `<tr class="stats-body-row" data-skey="${item.key}" style="${item.isCustom?'background:var(--c-blue-bg)':''}">
       <td style="font-size:11px;color:var(--c-text2)">${item.catIco} ${item.catName}</td>
       <td style="${bold?'font-weight:600':''}">${item.label}${custTag}</td>
       <td><span class="stats-pill ${sc}" data-sbadge="${item.key}">${STATUS_LABEL[item.status]}</span></td>
       <td style="text-align:center;white-space:nowrap">
         <button class="ri-edit-btn-ico" onclick="statsEditItem('${_sk(item.key)}')" title="修改狀態">✎</button>
-        <button class="ri-edit-btn-ico" onclick="${delFn}" title="移除" style="color:var(--c-red)">✕</button>
+        <button class="ri-edit-btn-ico" onclick="${delFn}" title="永久刪除此項目" style="color:var(--c-red)">🗑</button>
       </td>
     </tr>`;
   }).join('');
+}
+
+function sysPermaDel(key, customId){
+  document.querySelectorAll('.stats-edit-tr').forEach(r=>r.remove());
+  if(customId){
+    // Permanently delete custom item
+    customItems=customItems.filter(c=>c.id!==customId);
+    saveCustom();
+  } else {
+    // Permanently hide built-in item from main grid + reports
+    hiddenItems.add(key);
+    saveHidden();
+    const cell=document.getElementById('cell-'+key);
+    if(cell) cell.style.display='none';
+    const idx=allKeys.indexOf(key);
+    if(idx>-1) allKeys.splice(idx,1);
+    updStats();
+  }
+  refreshSysSec();
 }
 
 function refreshSysSec(){

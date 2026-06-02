@@ -203,6 +203,19 @@ body{background:var(--c-bg3);color:var(--c-text);font-family:-apple-system,Blink
 /* ── Lux meter ── */
 .fab3{position:fixed;bottom:68px;right:16px;background:var(--c-teal);color:#fff;border:none;border-radius:50px;padding:10px 16px;font-size:13px;font-weight:600;cursor:pointer;z-index:200;box-shadow:0 4px 16px rgba(0,0,0,.2);-webkit-tap-highlight-color:transparent}
 .fab3:active{transform:scale(.96)}
+.fab4{position:fixed;bottom:68px;left:16px;background:var(--c-blue);color:#fff;border:none;border-radius:50px;padding:10px 16px;font-size:13px;font-weight:600;cursor:pointer;z-index:200;box-shadow:0 4px 16px rgba(0,0,0,.2);-webkit-tap-highlight-color:transparent}
+.fab4:active{transform:scale(.96)}
+/* Stats modal table */
+.stats-tbl{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:12px}
+.stats-tbl th{background:var(--c-bg3);padding:5px 7px;text-align:left;font-size:11px;color:var(--c-text2);border-bottom:1px solid var(--c-border)}
+.stats-tbl td{padding:5px 7px;border-bottom:1px solid var(--c-border);vertical-align:top}
+.stats-tbl tr:last-child td{border-bottom:none}
+.stats-cat-hd{background:var(--c-bg2);font-weight:700;font-size:12px;padding:6px 8px;margin:10px 0 2px;border-radius:6px;display:flex;align-items:center;gap:6px}
+.stats-pill{display:inline-block;font-size:10px;padding:1px 6px;border-radius:10px;font-weight:600;margin-left:3px}
+.sp-r{background:var(--c-red-bg);color:var(--c-red)}
+.sp-a{background:var(--c-amber-bg);color:var(--c-amber)}
+.sp-g{background:var(--c-grn-bg);color:var(--c-grn)}
+.sp-b{background:var(--c-blue-bg);color:var(--c-blue)}
 .lux-modal{background:var(--c-bg);border-radius:16px;max-width:520px;margin:0 auto;overflow:hidden}
 .lux-body-inner{padding:16px;max-height:70vh;overflow-y:auto;-webkit-overflow-scrolling:touch}
 .lux-sec{margin-bottom:16px}
@@ -464,6 +477,7 @@ body{background:var(--c-bg3);color:var(--c-text);font-family:-apple-system,Blink
 <button class="fab" onclick="scrollToTop()">▲ 回頂部</button>
 <button class="fab2" onclick="openReport()">📋 產生報告</button>
 <button class="fab3" onclick="openLux()">🔆 光度計</button>
+<button class="fab4" onclick="openStats()">📊 統計</button>
 
 <div class="modal-bg" id="modal-bg" onclick="bgClick(event)">
   <div class="modal">
@@ -479,6 +493,21 @@ body{background:var(--c-bg3);color:var(--c-text);font-family:-apple-system,Blink
       <button class="mbtn" style="background:var(--c-blue-bg);color:var(--c-blue)" onclick="exportData()">💾 匯出資料</button>
       <button class="mbtn" style="background:var(--c-teal-bg);color:var(--c-teal)" onclick="openImport()">📂 匯入資料</button>
       <button class="mbtn mbtn-reset" onclick="confirmReset()">重置所有</button>
+    </div>
+  </div>
+</div>
+
+<!-- Stats modal -->
+<div class="modal-bg" id="stats-bg" onclick="if(event.target===this)closeStats()">
+  <div class="modal">
+    <div class="modal-hd">
+      <div class="modal-title">📊 缺失數量統計總表</div>
+      <button class="modal-close" onclick="closeStats()">✕</button>
+    </div>
+    <div class="modal-body" id="stats-body"></div>
+    <div class="modal-footer">
+      <button class="mbtn mbtn-print" onclick="printStatsToPDF()">🖨️ 單獨列印統計表</button>
+      <button class="mbtn" style="background:var(--c-bg2);color:var(--c-text2)" onclick="closeStats()">關閉</button>
     </div>
   </div>
 </div>
@@ -1247,6 +1276,30 @@ function printReportToPDF(){
     html+=`</div>`;
   }
 
+  // ── 數量統計總表 ──────────────────────────────────────────────────────────
+  const catStats = buildCatStats();
+  const csTotal  = catStats.reduce((s,r)=>s+r.total,0);
+  const csRepair = catStats.reduce((s,r)=>s+r.repair,0);
+  const csRecheck= catStats.reduce((s,r)=>s+r.recheck,0);
+  html+=`<div class="print-bld-section">
+    <div class="print-bld-title" style="background:#185FA5;color:#fff">📊 缺失數量統計總表　共 ${csTotal} 項　需修繕 ${csRepair} 項　待複查 ${csRecheck} 項</div>
+    <table class="print-table"><thead>
+      <tr><th width="20%">設備類型</th><th width="30%">各棟分佈</th><th width="10%">合計</th><th width="10%">需修繕</th><th width="10%">待複查</th><th width="10%">待確認</th><th width="10%">已完修</th></tr>
+    </thead><tbody>`;
+  catStats.forEach(row=>{
+    const bldParts=Object.entries(row.bldMap).map(([n,b])=>`${n}×${b.total}`).join('  ');
+    html+=`<tr>
+      <td>${row.cat.ico} ${row.cat.name}</td>
+      <td style="font-size:11px">${bldParts}</td>
+      <td style="text-align:center;font-weight:700">${row.total}</td>
+      <td style="text-align:center;color:${row.repair>0?'#A32D2D':'#aaa'};font-weight:${row.repair>0?'700':'400'}">${row.repair||'—'}</td>
+      <td style="text-align:center;color:${row.recheck>0?'#854F0B':'#aaa'};font-weight:${row.recheck>0?'700':'400'}">${row.recheck||'—'}</td>
+      <td style="text-align:center;color:#185FA5">${row.pending||'—'}</td>
+      <td style="text-align:center;color:#3B6D11">${(row.done+row.ok)||'—'}</td>
+    </tr>`;
+  });
+  html+=`</tbody></table></div>`;
+
   html+=`<div><div class="print-header" style="margin-bottom:20px"><h2>附錄：法源依據與檢修標準</h2></div>`;
   LAWS.forEach(law=>{
     html+=`<div class="print-appendix-item"><h3 style="margin:0 0 6px 0;font-size:14px">${law.ico} ${law.name}</h3><p style="margin:0 0 6px 0;font-size:12px;line-height:1.5"><strong>法規依據：</strong>${law.ref}</p><p style="margin:0;font-size:12px;line-height:1.5"><strong>修繕標準：</strong>${law.plain}</p></div>`;
@@ -1301,6 +1354,178 @@ function copyReport(){
     document.body.appendChild(ta);ta.focus();ta.select();document.execCommand('copy');document.body.removeChild(ta);
     const el=document.getElementById('copy-ok');el.style.display='block';setTimeout(()=>{el.style.display='none';},2500);
   }
+}
+
+// ── Category quantity stats ────────────────────────────────────────────────────
+function buildCatStats(){
+  // Returns ordered array of { catKey, cat, total, bldRows, repair, recheck, done, ok, pending }
+  // bldRows = [{name, total, repair, recheck, done, ok, pending}]
+  const catOrder = Object.keys(CATS);
+  const map = {};
+  BLDS.forEach(b=>{
+    b.cats.forEach((cg,ci)=>{
+      if(!map[cg.cat]) map[cg.cat]={total:0,repair:0,recheck:0,done:0,ok:0,pending:0,bldMap:{}};
+      const st = map[cg.cat];
+      if(!st.bldMap[b.name]) st.bldMap[b.name]={total:0,repair:0,recheck:0,done:0,ok:0,pending:0};
+      const bst = st.bldMap[b.name];
+      cg.items.forEach((it,ii)=>{
+        const k = mkKey(b.id,ci,ii);
+        const s = chk[k] || '';
+        st.total++; bst.total++;
+        const bucket = s||'pending';
+        st[bucket]=(st[bucket]||0)+1;
+        bst[bucket]=(bst[bucket]||0)+1;
+      });
+    });
+  });
+  return catOrder.filter(k=>map[k]).map(k=>({catKey:k, cat:CATS[k], ...map[k]}));
+}
+
+function renderStatsHTML(stats){
+  const total = stats.reduce((s,r)=>s+r.total,0);
+  const totalRepair = stats.reduce((s,r)=>s+r.repair,0);
+  const totalRecheck = stats.reduce((s,r)=>s+r.recheck,0);
+  const totalPending = stats.reduce((s,r)=>s+r.pending,0);
+  const totalDone = stats.reduce((s,r)=>s+r.done,0);
+  const totalOk = stats.reduce((s,r)=>s+r.ok,0);
+
+  let h=`<div style="padding:12px 14px 4px">
+    <div style="font-size:12px;color:var(--c-text2);margin-bottom:10px">
+      共 <b>${total}</b> 個缺失項目　
+      <span class="stats-pill sp-r">需修繕 ${totalRepair}</span>
+      <span class="stats-pill sp-a">待複查 ${totalRecheck}</span>
+      <span class="stats-pill sp-b">待確認 ${totalPending}</span>
+      <span class="stats-pill sp-g">已完修 ${totalDone}　正常 ${totalOk}</span>
+    </div>`;
+
+  stats.forEach(row=>{
+    const bldNames = Object.keys(row.bldMap);
+    const bldSummary = bldNames.map(n=>{
+      const b=row.bldMap[n];
+      const bad=b.repair+b.recheck+b.pending;
+      return `${n}×${b.total}${bad>0?'（壞'+bad+'）':''}`;
+    }).join('　');
+
+    h+=`<div class="stats-cat-hd">
+      <span>${row.cat.ico} ${row.cat.name}</span>
+      <span style="font-size:11px;color:var(--c-text2);flex:1">合計 ${row.total} 項</span>`;
+    if(row.repair>0) h+=`<span class="stats-pill sp-r">需修繕 ${row.repair}</span>`;
+    if(row.recheck>0) h+=`<span class="stats-pill sp-a">待複查 ${row.recheck}</span>`;
+    if(row.pending>0) h+=`<span class="stats-pill sp-b">待確認 ${row.pending}</span>`;
+    if(row.done>0)   h+=`<span class="stats-pill sp-g">已完修 ${row.done}</span>`;
+    if(row.ok>0)     h+=`<span class="stats-pill sp-g">正常 ${row.ok}</span>`;
+    h+=`</div>`;
+
+    h+=`<table class="stats-tbl"><thead><tr>
+      <th width="22%">棟別</th><th width="12%">項目數</th>
+      <th width="16%">需修繕</th><th width="16%">待複查</th>
+      <th width="16%">待確認</th><th width="18%">已完修/正常</th>
+    </tr></thead><tbody>`;
+
+    bldNames.forEach(n=>{
+      const b=row.bldMap[n];
+      const bad=b.repair+b.recheck;
+      const rowStyle=bad>0?'color:var(--c-red);font-weight:600':'';
+      h+=`<tr>
+        <td style="${rowStyle}">${n}</td>
+        <td style="text-align:center">${b.total}</td>
+        <td style="text-align:center;color:${b.repair>0?'var(--c-red)':'var(--c-text3)'};font-weight:${b.repair>0?'700':'400'}">${b.repair||'—'}</td>
+        <td style="text-align:center;color:${b.recheck>0?'var(--c-amber)':'var(--c-text3)'};font-weight:${b.recheck>0?'700':'400'}">${b.recheck||'—'}</td>
+        <td style="text-align:center;color:${b.pending>0?'var(--c-blue)':'var(--c-text3)'}">${b.pending||'—'}</td>
+        <td style="text-align:center;color:var(--c-grn)">${(b.done+b.ok)||'—'}</td>
+      </tr>`;
+    });
+
+    // Totals row
+    h+=`<tr style="background:var(--c-bg2);font-weight:700">
+      <td>合計</td>
+      <td style="text-align:center">${row.total}</td>
+      <td style="text-align:center;color:${row.repair>0?'var(--c-red)':'var(--c-text3)'}">${row.repair||'—'}</td>
+      <td style="text-align:center;color:${row.recheck>0?'var(--c-amber)':'var(--c-text3)'}">${row.recheck||'—'}</td>
+      <td style="text-align:center;color:${row.pending>0?'var(--c-blue)':'var(--c-text3)'}">${row.pending||'—'}</td>
+      <td style="text-align:center;color:var(--c-grn)">${(row.done+row.ok)||'—'}</td>
+    </tr>`;
+    h+=`</tbody></table>`;
+  });
+  h+=`</div>`;
+  return h;
+}
+
+function openStats(){
+  const stats = buildCatStats();
+  document.getElementById('stats-body').innerHTML = renderStatsHTML(stats);
+  document.getElementById('stats-bg').className='modal-bg show';
+}
+function closeStats(){ document.getElementById('stats-bg').className='modal-bg'; }
+
+function printStatsToPDF(){
+  const stats = buildCatStats();
+  const now=new Date();
+  const ts=now.getFullYear()+'/'+(now.getMonth()+1).toString().padStart(2,'0')+'/'+now.getDate().toString().padStart(2,'0')+' '+now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0');
+  const total = stats.reduce((s,r)=>s+r.total,0);
+  const totalRepair = stats.reduce((s,r)=>s+r.repair,0);
+  const totalRecheck = stats.reduce((s,r)=>s+r.recheck,0);
+
+  let html=`<div class="print-header">
+    <h1>伊登花園 消防缺失數量統計總表</h1>
+    <div class="print-meta"><span><strong>巡查日期：</strong>${meta.date}</span><span><strong>廠商人員：</strong>${meta.vendor}</span>${meta.community?`<span><strong>社區檢查人：</strong>${meta.community}</span>`:''}</div>
+    <div class="print-meta"><span>缺失項目共 ${total} 項　需修繕 ${totalRepair} 項　待複查 ${totalRecheck} 項</span><span><strong>輸出時間：</strong>${ts}</span></div>
+  </div>`;
+
+  // Summary overview table
+  html+=`<div class="print-bld-section">
+    <div class="print-bld-title" style="background:#185FA5;color:#fff">📊 各類別缺失彙總</div>
+    <table class="print-table"><thead>
+      <tr><th width="20%">設備類型</th><th width="30%">各棟分佈</th><th width="10%">合計</th><th width="10%">需修繕</th><th width="10%">待複查</th><th width="10%">待確認</th><th width="10%">已完修</th></tr>
+    </thead><tbody>`;
+  stats.forEach(row=>{
+    const bldParts=Object.entries(row.bldMap).map(([n,b])=>`${n}×${b.total}`).join(' ');
+    html+=`<tr>
+      <td>${row.cat.ico} ${row.cat.name}</td>
+      <td style="font-size:11px">${bldParts}</td>
+      <td style="text-align:center;font-weight:700">${row.total}</td>
+      <td style="text-align:center;color:${row.repair>0?'#A32D2D':'#aaa'};font-weight:${row.repair>0?'700':'400'}">${row.repair||'—'}</td>
+      <td style="text-align:center;color:${row.recheck>0?'#854F0B':'#aaa'};font-weight:${row.recheck>0?'700':'400'}">${row.recheck||'—'}</td>
+      <td style="text-align:center;color:#185FA5">${row.pending||'—'}</td>
+      <td style="text-align:center;color:#3B6D11">${(row.done+row.ok)||'—'}</td>
+    </tr>`;
+  });
+  html+=`</tbody></table></div>`;
+
+  // Per-category detail tables
+  stats.forEach(row=>{
+    const bldNames=Object.keys(row.bldMap);
+    html+=`<div class="print-bld-section">
+      <div class="print-bld-title">${row.cat.ico} ${row.cat.name}　<span style="font-size:12px;font-weight:400">（法規：${row.cat.law}）</span></div>
+      <table class="print-table"><thead>
+        <tr><th width="25%">棟別</th><th width="15%">項目數</th><th width="15%">需修繕</th><th width="15%">待複查</th><th width="15%">待確認</th><th width="15%">完成</th></tr>
+      </thead><tbody>`;
+    bldNames.forEach(n=>{
+      const b=row.bldMap[n];
+      const bad=b.repair+b.recheck;
+      html+=`<tr style="${bad>0?'font-weight:700;color:#A32D2D':''}">
+        <td>${n}</td>
+        <td style="text-align:center">${b.total}</td>
+        <td style="text-align:center">${b.repair||'—'}</td>
+        <td style="text-align:center">${b.recheck||'—'}</td>
+        <td style="text-align:center">${b.pending||'—'}</td>
+        <td style="text-align:center">${(b.done+b.ok)||'—'}</td>
+      </tr>`;
+    });
+    html+=`<tr style="background:#f5f5f5;font-weight:700">
+      <td>全棟合計</td>
+      <td style="text-align:center">${row.total}</td>
+      <td style="text-align:center;color:${row.repair>0?'#A32D2D':'#aaa'}">${row.repair||'—'}</td>
+      <td style="text-align:center;color:${row.recheck>0?'#854F0B':'#aaa'}">${row.recheck||'—'}</td>
+      <td style="text-align:center;color:#185FA5">${row.pending||'—'}</td>
+      <td style="text-align:center;color:#3B6D11">${(row.done+row.ok)||'—'}</td>
+    </tr>`;
+    html+=`</tbody></table></div>`;
+  });
+
+  document.getElementById('print-area').innerHTML=html;
+  closeStats();
+  setTimeout(()=>window.print(),300);
 }
 
 function confirmReset(){

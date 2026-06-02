@@ -1144,6 +1144,7 @@ let reportHidden = new Set(); // keys removed in current report session
 let reportFilter = 'all';    // current filter mode
 
 function shouldInclude(key, status){
+  if(hiddenItems.has(key)) return false;
   if(reportHidden.has(key)) return false;
   if(reportFilter==='repair')  return status==='repair';
   if(reportFilter==='recheck') return status==='recheck';
@@ -1364,6 +1365,7 @@ function openReport(){
     b.cats.forEach((cg,ci)=>{
       cg.items.forEach((it,ii)=>{
         const k=mkKey(b.id,ci,ii);
+        if(hiddenItems.has(k)) return; // skip permanently hidden items
         const s=chk[k]||'';
         const cls=s==='repair'?'ri-repair':s==='recheck'?'ri-recheck':s==='done'?'ri-done':s==='ok'?'ri-ok':'ri-no';
         const lv=luxData[k];
@@ -1458,6 +1460,7 @@ function printReportToPDF(){
         const k=mkKey(b.id,ci,ii);
         const s=chk[k]||'';
         if(s!=='repair'&&s!=='recheck')return;
+        if(hiddenItems.has(k))return;
         if(reportHidden.has(k))return;
         if(!summaryMap[cg.cat]) summaryMap[cg.cat]=[];
         const lv=luxData[k];

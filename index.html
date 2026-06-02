@@ -1661,32 +1661,20 @@ function renderStatsHTML(stats){
       sysItems.push({catKey:ci.cat, catName:c.name, catIco:c.ico, label:ci.label, status:ci.status||'', key:'cust_'+ci.id, isCustom:true, customId:ci.id});
     });
   }
-  if(sysItems.length>0){
+  if(sysItems.length>0 || sysBld){
+    const sysRep=sysItems.filter(x=>x.status==='repair').length;
+    const sysRec=sysItems.filter(x=>x.status==='recheck').length;
     h+=`<div class="stats-sys-hd">🔥 全區消防系統　共 ${sysItems.length} 項　
-      ${sysItems.filter(x=>x.status==='repair').length>0?`<span class="stats-pill sp-r">需修繕 ${sysItems.filter(x=>x.status==='repair').length}</span>`:''}
-      ${sysItems.filter(x=>x.status==='recheck').length>0?`<span class="stats-pill sp-a">待複查 ${sysItems.filter(x=>x.status==='recheck').length}</span>`:''}
+      ${sysRep>0?`<span class="stats-pill sp-r">需修繕 ${sysRep}</span>`:''}
+      ${sysRec>0?`<span class="stats-pill sp-a">待複查 ${sysRec}</span>`:''}
       <button class="sa-btn sa-btn-ok" style="padding:2px 7px;font-size:10px;margin-left:auto"
-        onclick="statsOpenAdd('pump')">＋</button>
+        onclick="statsOpenSysAdd()">＋ 新增</button>
     </div>`;
     h+=`<div id="stats-add-area-sys-fire"></div>`;
     h+=`<table class="stats-detail-tbl"><thead><tr>
       <th width="18%">設備類型</th><th width="47%">項目名稱</th><th width="20%">狀態</th><th width="15%">操作</th>
-    </tr></thead><tbody>`;
-    sysItems.forEach(item=>{
-      const sc=item.status==='repair'?'sp-r':item.status==='recheck'?'sp-a':item.status==='done'||item.status==='ok'?'sp-g':'sp-b';
-      const bold=item.status==='repair'||item.status==='recheck';
-      const custTag=item.isCustom?` <span style="font-size:9px;color:var(--c-blue)">[自訂]</span>`:'';
-      const delFn=item.isCustom?`statsDelCustom('${_sk(item.customId)}')`:`statsDelItem('${_sk(item.key)}')`;
-      h+=`<tr class="stats-body-row" data-skey="${item.key}" style="${item.isCustom?'background:var(--c-blue-bg)':''}">
-        <td style="font-size:11px;color:var(--c-text2)">${item.catIco} ${item.catName}</td>
-        <td style="${bold?'font-weight:600':''}">${item.label}${custTag}</td>
-        <td><span class="stats-pill ${sc}" data-sbadge="${item.key}">${STATUS_LABEL[item.status]}</span></td>
-        <td style="text-align:center;white-space:nowrap">
-          <button class="ri-edit-btn-ico" onclick="statsEditItem('${_sk(item.key)}')" title="修改狀態">✎</button>
-          <button class="ri-edit-btn-ico" onclick="${delFn}" title="移除" style="color:var(--c-red)">✕</button>
-        </td>
-      </tr>`;
-    });
+    </tr></thead><tbody id="stats-sys-tbody">`;
+    h+=renderSysItemRows(sysItems);
     h+=`</tbody></table>`;
   }
 
@@ -1788,6 +1776,8 @@ function statsDelItem(key){
   statsHidden.add(key);
   document.querySelectorAll('.stats-body-row').forEach(r=>{ if(r.getAttribute('data-skey')===key) r.style.display='none'; });
   document.querySelectorAll('.stats-edit-tr').forEach(r=>r.remove());
+  // Refresh sys section header count if this was a sys item
+  if(key.startsWith('sys|')||key.startsWith('cust_')) refreshSysHdrCount();
 }
 
 function statsDelCustom(id){
@@ -1796,6 +1786,17 @@ function statsDelCustom(id){
   const key='cust_'+id;
   document.querySelectorAll('.stats-body-row').forEach(r=>{ if(r.getAttribute('data-skey')===key) r.style.display='none'; });
   document.querySelectorAll('.stats-edit-tr').forEach(r=>r.remove());
+  refreshSysHdrCount();
+}
+
+function refreshSysHdrCount(){
+  // Update sys section header item count
+  const sysHd=document.querySelector('.stats-sys-hd');
+  if(!sysHd) return;
+  const visRows=[...document.querySelectorAll('#stats-sys-tbody .stats-body-row')].filter(r=>r.style.display!=='none');
+  const total=visRows.length;
+  const firstText=sysHd.firstChild;
+  if(firstText&&firstText.nodeType===3) firstText.textContent=`🔥 全區消防系統　共 ${total} 項　`;
 }
 
 function statsOpenAdd(catKey){
@@ -1833,6 +1834,82 @@ function confirmStatsAdd(catKey){
   saveCustom();
   document.getElementById('stats-add-form-'+catKey)?.remove();
   refreshStatsCat(catKey);
+}
+
+// ── Stats fire system (sys) add / refresh ─────────────────────────────────────
+function renderSysItemRows(items){
+  return items.map(item=>{
+    const sc=item.status==='repair'?'sp-r':item.status==='recheck'?'sp-a':item.status==='done'||item.status==='ok'?'sp-g':'sp-b';
+    const bold=item.status==='repair'||item.status==='recheck';
+    const custTag=item.isCustom?` <span style="font-size:9px;color:var(--c-blue)">[自訂]</span>`:'';
+    const delFn=item.isCustom?`statsDelCustom('${_sk(item.customId)}')`:`statsDelItem('${_sk(item.key)}')`;
+    return `<tr class="stats-body-row" data-skey="${item.key}" style="${item.isCustom?'background:var(--c-blue-bg)':''}">
+      <td style="font-size:11px;color:var(--c-text2)">${item.catIco} ${item.catName}</td>
+      <td style="${bold?'font-weight:600':''}">${item.label}${custTag}</td>
+      <td><span class="stats-pill ${sc}" data-sbadge="${item.key}">${STATUS_LABEL[item.status]}</span></td>
+      <td style="text-align:center;white-space:nowrap">
+        <button class="ri-edit-btn-ico" onclick="statsEditItem('${_sk(item.key)}')" title="修改狀態">✎</button>
+        <button class="ri-edit-btn-ico" onclick="${delFn}" title="移除" style="color:var(--c-red)">✕</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function refreshSysSec(){
+  // Rebuild sys items and refresh just that tbody
+  const sysItems=[];
+  const sysBld=BLDS.find(b=>b.id==='sys');
+  if(sysBld){
+    sysBld.cats.forEach((cg,ci)=>{
+      const c=CATS[cg.cat];
+      cg.items.forEach((it,ii)=>{
+        const k=mkKey('sys',ci,ii);
+        if(hiddenItems.has(k)||statsHidden.has(k))return;
+        const s=chk[k]||'';
+        sysItems.push({catKey:cg.cat,catName:c.name,catIco:c.ico,label:it.label,status:s,key:k,isCustom:false});
+      });
+    });
+    customItems.filter(c=>c.bid==='sys'&&!hiddenItems.has('cust_'+c.id)&&!statsHidden.has('cust_'+c.id)).forEach(ci=>{
+      const c=CATS[ci.cat]||{name:ci.cat,ico:'📌'};
+      sysItems.push({catKey:ci.cat,catName:c.name,catIco:c.ico,label:ci.label,status:ci.status||'',key:'cust_'+ci.id,isCustom:true,customId:ci.id});
+    });
+  }
+  const tbody=document.getElementById('stats-sys-tbody');
+  if(tbody) tbody.innerHTML=renderSysItemRows(sysItems);
+}
+
+function statsOpenSysAdd(){
+  document.querySelectorAll('.stats-add-form').forEach(f=>f.remove());
+  document.querySelectorAll('.stats-edit-tr').forEach(r=>r.remove());
+  const area=document.getElementById('stats-add-area-sys-fire');
+  if(!area) return;
+  const div=document.createElement('div');
+  div.className='stats-add-form';
+  div.id='stats-add-form-sys';
+  div.innerHTML=`<span class="stats-add-lbl">＋ 新增消防系統項目</span>
+    <select id="sa-syscat" style="font-size:12px;padding:4px 8px;border:1px solid var(--c-border2);border-radius:6px;background:var(--c-bg);color:var(--c-text)">
+      <option value="ext">🧯 滅火器</option>
+      <option value="pump">💧 消防幫浦</option>
+    </select>
+    <input type="text" id="sa-syslbl" placeholder="項目說明，例：B棟 滅火器壓力不足">
+    <button class="sa-btn sa-btn-ok" onclick="confirmSysAdd()">新增</button>
+    <button class="sa-btn sa-btn-cancel" onclick="document.getElementById('stats-add-form-sys')?.remove()">取消</button>`;
+  area.after(div);
+  setTimeout(()=>document.getElementById('sa-syslbl')?.focus(), 50);
+}
+
+function confirmSysAdd(){
+  const catSel=document.getElementById('sa-syscat');
+  const lblInp=document.getElementById('sa-syslbl');
+  if(!catSel||!lblInp) return;
+  const catKey=catSel.value;
+  const label=lblInp.value.trim();
+  if(!label){lblInp.style.borderColor='var(--c-red)';lblInp.focus();return;}
+  const id=Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+  customItems.push({id, cat:catKey, bid:'sys', bldName:'全區消防系統', label, status:''});
+  saveCustom();
+  document.getElementById('stats-add-form-sys')?.remove();
+  refreshSysSec();
 }
 
 function openStats(){

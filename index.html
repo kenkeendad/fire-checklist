@@ -197,8 +197,23 @@ body{background:var(--c-bg3);color:var(--c-text);font-family:-apple-system,Blink
 .rf-btn.active{background:var(--c-text);color:var(--c-bg);border-color:transparent}
 .rf-count{font-size:10px;opacity:.7;margin-left:2px}
 /* report-item delete button */
-.ri-x{background:none;border:none;color:var(--c-border2);font-size:13px;cursor:pointer;padding:0 2px 0 6px;margin-left:auto;flex-shrink:0;line-height:1;-webkit-tap-highlight-color:transparent}
+.ri-x{background:none;border:none;color:var(--c-border2);font-size:13px;cursor:pointer;padding:0 2px 0 4px;margin-left:auto;flex-shrink:0;line-height:1;-webkit-tap-highlight-color:transparent}
 .ri-x:hover,.ri-x:active{color:var(--c-red)}
+.ri-edit-btn-ico{background:none;border:none;color:var(--c-text3);font-size:13px;cursor:pointer;padding:0 2px 0 2px;flex-shrink:0;line-height:1;-webkit-tap-highlight-color:transparent}
+.ri-edit-btn-ico:hover,.ri-edit-btn-ico:active{color:var(--c-blue)}
+.ri-edit-panel{display:flex;flex-wrap:wrap;gap:5px;padding:5px 10px 7px 14px;background:var(--c-bg2);border-bottom:1px solid var(--c-border)}
+.ri-status-opt{font-size:11px;padding:3px 9px;border-radius:6px;border:1px solid var(--c-border2);background:var(--c-bg);color:var(--c-text);cursor:pointer;white-space:nowrap;-webkit-tap-highlight-color:transparent}
+.ri-status-opt.active{font-weight:700}
+.ri-status-opt.so-pending.active{background:var(--c-gray-bg);color:var(--c-gray);border-color:var(--c-gray)}
+.ri-status-opt.so-ok.active{background:var(--c-grn-bg);color:var(--c-grn);border-color:var(--c-grn)}
+.ri-status-opt.so-recheck.active{background:var(--c-amber-bg);color:var(--c-amber);border-color:var(--c-amber)}
+.ri-status-opt.so-repair.active{background:var(--c-red-bg);color:var(--c-red);border-color:var(--c-red)}
+.ri-status-opt.so-done.active{background:var(--c-blue-bg);color:var(--c-blue);border-color:var(--c-blue)}
+/* Stats detail for pump */
+.stats-detail-tbl{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:2px}
+.stats-detail-tbl th{background:var(--c-bg3);padding:4px 7px;text-align:left;font-size:10px;color:var(--c-text2);border-bottom:1px solid var(--c-border)}
+.stats-detail-tbl td{padding:4px 7px;border-bottom:.5px solid var(--c-border);font-size:12px;vertical-align:middle}
+.stats-detail-tbl tr:last-child td{border-bottom:none}
 
 /* ── Lux meter ── */
 .fab3{position:fixed;bottom:68px;right:16px;background:var(--c-teal);color:#fff;border:none;border-radius:50px;padding:10px 16px;font-size:13px;font-weight:600;cursor:pointer;z-index:200;box-shadow:0 4px 16px rgba(0,0,0,.2);-webkit-tap-highlight-color:transparent}
@@ -1055,6 +1070,49 @@ function shouldInclude(key, status){
   return true;
 }
 
+// ── Report item inline edit ────────────────────────────────────────────────────
+const SO_CLS={'':'so-pending','ok':'so-ok','recheck':'so-recheck','repair':'so-repair','done':'so-done'};
+
+function rptEditItem(key){
+  // Toggle: close if already open
+  const existing=document.querySelector('.ri-edit-panel[data-ekey="'+key+'"]');
+  if(existing){existing.remove();return;}
+  // Close any other open panels
+  document.querySelectorAll('.ri-edit-panel').forEach(p=>p.remove());
+  const el=document.querySelector('.report-item[data-rkey="'+key+'"]');
+  if(!el)return;
+  const cur=chk[key]||'';
+  const panel=document.createElement('div');
+  panel.className='ri-edit-panel';
+  panel.dataset.ekey=key;
+  panel.innerHTML=STATUS_CYCLE.map(s=>
+    `<button class="ri-status-opt ${SO_CLS[s]}${s===cur?' active':''}" onclick="rptSetStatus('${key}','${s}')">${STATUS_LABEL[s]}</button>`
+  ).join('');
+  el.after(panel);
+}
+
+function rptSetStatus(key, status){
+  chk[key]=status;
+  saveChk();
+  updStats();
+  updReportStats();
+  // Update badge in report modal
+  const badge=document.getElementById('ri-badge-'+key);
+  if(badge){
+    const cls=status==='repair'?'ri-repair':status==='recheck'?'ri-recheck':status==='done'?'ri-done':status==='ok'?'ri-ok':'ri-no';
+    badge.textContent='['+STATUS_LABEL[status]+']';
+    badge.className=cls;
+  }
+  // Update the item's data-rs so filter works correctly
+  const el=document.querySelector('.report-item[data-rkey="'+key+'"]');
+  if(el) el.dataset.rs=status;
+  // Sync main grid badge
+  const mainBadge=document.getElementById('st-'+key);
+  if(mainBadge){mainBadge.textContent=STATUS_MARK[status];mainBadge.className='st '+STATUS_CLS[status];}
+  // Close panel
+  document.querySelectorAll('.ri-edit-panel').forEach(p=>p.remove());
+}
+
 function updReportStats(){
   const c=calcCnt();
   const set=e=>{const el=document.getElementById(e[0]);if(el)el.textContent=e[1];};
@@ -1137,7 +1195,7 @@ function openReport(){
         const lv=luxData[k];
         const luxTag = (lv !== undefined && LUX_SPEC[cg.cat])
           ? ` <span style="font-size:10px;opacity:.75">[${LUX_SPEC[cg.cat].unit==='cd'?lv.toFixed(1)+' cd':lv.toFixed(1)+' lux'}]</span>` : '';
-        html+=`<div class="report-item" data-rkey="${k}" data-rs="${s}"><span class="${cls}">[${STATUS_LABEL[s]}]</span><span>${it.label}${luxTag}</span><button class="ri-x" onclick="delReportItem('${k}')" title="從報告移除">✕</button></div>`;
+        html+=`<div class="report-item" data-rkey="${k}" data-rs="${s}"><span class="${cls}" id="ri-badge-${k}">[${STATUS_LABEL[s]}]</span><span style="flex:1">${it.label}${luxTag}</span><button class="ri-edit-btn-ico" onclick="rptEditItem('${k}')" title="修改狀態">✎</button><button class="ri-x" onclick="delReportItem('${k}')" title="從報告移除">✕</button></div>`;
       });
     });
     // Extinguisher summary
@@ -1357,14 +1415,16 @@ function copyReport(){
 }
 
 // ── Category quantity stats ────────────────────────────────────────────────────
+// Categories that show each item individually (unique/descriptive, non-repeating)
+const CATS_ITEM_DETAIL = new Set(['pump','alarm','smoke']);
+
 function buildCatStats(){
-  // Returns ordered array of { catKey, cat, total, bldRows, repair, recheck, done, ok, pending }
-  // bldRows = [{name, total, repair, recheck, done, ok, pending}]
+  // Returns ordered array of { catKey, cat, total, bldMap, repair, recheck, done, ok, pending, detailItems? }
   const catOrder = Object.keys(CATS);
   const map = {};
   BLDS.forEach(b=>{
     b.cats.forEach((cg,ci)=>{
-      if(!map[cg.cat]) map[cg.cat]={total:0,repair:0,recheck:0,done:0,ok:0,pending:0,bldMap:{}};
+      if(!map[cg.cat]) map[cg.cat]={total:0,repair:0,recheck:0,done:0,ok:0,pending:0,bldMap:{},detailItems:[]};
       const st = map[cg.cat];
       if(!st.bldMap[b.name]) st.bldMap[b.name]={total:0,repair:0,recheck:0,done:0,ok:0,pending:0};
       const bst = st.bldMap[b.name];
@@ -1375,6 +1435,9 @@ function buildCatStats(){
         const bucket = s||'pending';
         st[bucket]=(st[bucket]||0)+1;
         bst[bucket]=(bst[bucket]||0)+1;
+        if(CATS_ITEM_DETAIL.has(cg.cat)){
+          st.detailItems.push({bld:b.name, label:it.label, status:s, key:k});
+        }
       });
     });
   });
@@ -1399,13 +1462,6 @@ function renderStatsHTML(stats){
     </div>`;
 
   stats.forEach(row=>{
-    const bldNames = Object.keys(row.bldMap);
-    const bldSummary = bldNames.map(n=>{
-      const b=row.bldMap[n];
-      const bad=b.repair+b.recheck+b.pending;
-      return `${n}×${b.total}${bad>0?'（壞'+bad+'）':''}`;
-    }).join('　');
-
     h+=`<div class="stats-cat-hd">
       <span>${row.cat.ico} ${row.cat.name}</span>
       <span style="font-size:11px;color:var(--c-text2);flex:1">合計 ${row.total} 項</span>`;
@@ -1416,36 +1472,51 @@ function renderStatsHTML(stats){
     if(row.ok>0)     h+=`<span class="stats-pill sp-g">正常 ${row.ok}</span>`;
     h+=`</div>`;
 
-    h+=`<table class="stats-tbl"><thead><tr>
-      <th width="22%">棟別</th><th width="12%">項目數</th>
-      <th width="16%">需修繕</th><th width="16%">待複查</th>
-      <th width="16%">待確認</th><th width="18%">已完修/正常</th>
-    </tr></thead><tbody>`;
-
-    bldNames.forEach(n=>{
-      const b=row.bldMap[n];
-      const bad=b.repair+b.recheck;
-      const rowStyle=bad>0?'color:var(--c-red);font-weight:600':'';
-      h+=`<tr>
-        <td style="${rowStyle}">${n}</td>
-        <td style="text-align:center">${b.total}</td>
-        <td style="text-align:center;color:${b.repair>0?'var(--c-red)':'var(--c-text3)'};font-weight:${b.repair>0?'700':'400'}">${b.repair||'—'}</td>
-        <td style="text-align:center;color:${b.recheck>0?'var(--c-amber)':'var(--c-text3)'};font-weight:${b.recheck>0?'700':'400'}">${b.recheck||'—'}</td>
-        <td style="text-align:center;color:${b.pending>0?'var(--c-blue)':'var(--c-text3)'}">${b.pending||'—'}</td>
-        <td style="text-align:center;color:var(--c-grn)">${(b.done+b.ok)||'—'}</td>
+    if(CATS_ITEM_DETAIL.has(row.catKey) && row.detailItems.length > 0){
+      // Individual item listing (pump / alarm / smoke)
+      h+=`<table class="stats-detail-tbl"><thead><tr>
+        <th width="20%">棟別</th><th width="55%">項目名稱</th><th width="25%">狀態</th>
+      </tr></thead><tbody>`;
+      row.detailItems.forEach(item=>{
+        const sc=item.status==='repair'?'sp-r':item.status==='recheck'?'sp-a':item.status==='done'||item.status==='ok'?'sp-g':'sp-b';
+        const rowBold=item.status==='repair'||item.status==='recheck'?'font-weight:700':'';
+        h+=`<tr style="${rowBold}">
+          <td>${item.bld}</td>
+          <td>${item.label}</td>
+          <td><span class="stats-pill ${sc}">${STATUS_LABEL[item.status]}</span></td>
+        </tr>`;
+      });
+      h+=`</tbody></table>`;
+    } else {
+      // Aggregated building table
+      const bldNames = Object.keys(row.bldMap);
+      h+=`<table class="stats-tbl"><thead><tr>
+        <th width="22%">棟別</th><th width="12%">項目數</th>
+        <th width="16%">需修繕</th><th width="16%">待複查</th>
+        <th width="16%">待確認</th><th width="18%">已完修/正常</th>
+      </tr></thead><tbody>`;
+      bldNames.forEach(n=>{
+        const b=row.bldMap[n];
+        const bad=b.repair+b.recheck;
+        h+=`<tr>
+          <td style="${bad>0?'color:var(--c-red);font-weight:600':''}">${n}</td>
+          <td style="text-align:center">${b.total}</td>
+          <td style="text-align:center;color:${b.repair>0?'var(--c-red)':'var(--c-text3)'};font-weight:${b.repair>0?'700':'400'}">${b.repair||'—'}</td>
+          <td style="text-align:center;color:${b.recheck>0?'var(--c-amber)':'var(--c-text3)'};font-weight:${b.recheck>0?'700':'400'}">${b.recheck||'—'}</td>
+          <td style="text-align:center;color:${b.pending>0?'var(--c-blue)':'var(--c-text3)'}">${b.pending||'—'}</td>
+          <td style="text-align:center;color:var(--c-grn)">${(b.done+b.ok)||'—'}</td>
+        </tr>`;
+      });
+      h+=`<tr style="background:var(--c-bg2);font-weight:700">
+        <td>合計</td>
+        <td style="text-align:center">${row.total}</td>
+        <td style="text-align:center;color:${row.repair>0?'var(--c-red)':'var(--c-text3)'}">${row.repair||'—'}</td>
+        <td style="text-align:center;color:${row.recheck>0?'var(--c-amber)':'var(--c-text3)'}">${row.recheck||'—'}</td>
+        <td style="text-align:center;color:${row.pending>0?'var(--c-blue)':'var(--c-text3)'}">${row.pending||'—'}</td>
+        <td style="text-align:center;color:var(--c-grn)">${(row.done+row.ok)||'—'}</td>
       </tr>`;
-    });
-
-    // Totals row
-    h+=`<tr style="background:var(--c-bg2);font-weight:700">
-      <td>合計</td>
-      <td style="text-align:center">${row.total}</td>
-      <td style="text-align:center;color:${row.repair>0?'var(--c-red)':'var(--c-text3)'}">${row.repair||'—'}</td>
-      <td style="text-align:center;color:${row.recheck>0?'var(--c-amber)':'var(--c-text3)'}">${row.recheck||'—'}</td>
-      <td style="text-align:center;color:${row.pending>0?'var(--c-blue)':'var(--c-text3)'}">${row.pending||'—'}</td>
-      <td style="text-align:center;color:var(--c-grn)">${(row.done+row.ok)||'—'}</td>
-    </tr>`;
-    h+=`</tbody></table>`;
+      h+=`</tbody></table>`;
+    }
   });
   h+=`</div>`;
   return h;
@@ -1496,31 +1567,49 @@ function printStatsToPDF(){
   stats.forEach(row=>{
     const bldNames=Object.keys(row.bldMap);
     html+=`<div class="print-bld-section">
-      <div class="print-bld-title">${row.cat.ico} ${row.cat.name}　<span style="font-size:12px;font-weight:400">（法規：${row.cat.law}）</span></div>
-      <table class="print-table"><thead>
+      <div class="print-bld-title">${row.cat.ico} ${row.cat.name}　<span style="font-size:12px;font-weight:400">（法規：${row.cat.law}）</span></div>`;
+
+    if(CATS_ITEM_DETAIL.has(row.catKey) && row.detailItems.length > 0){
+      // Individual item listing
+      html+=`<table class="print-table"><thead>
+        <tr><th width="20%">棟別</th><th width="55%">項目名稱</th><th width="25%">狀態</th></tr>
+      </thead><tbody>`;
+      row.detailItems.forEach(item=>{
+        const bad=item.status==='repair'||item.status==='recheck';
+        const sc=item.status==='repair'?'print-status-repair':item.status==='recheck'?'print-status-recheck':item.status==='done'||item.status==='ok'?'print-status-ok':'print-status-pending';
+        html+=`<tr style="${bad?'font-weight:700':''}">
+          <td>${item.bld}</td><td>${item.label}</td><td class="${sc}">${STATUS_LABEL[item.status]}</td>
+        </tr>`;
+      });
+      html+=`</tbody></table>`;
+    } else {
+      // Aggregated building table
+      html+=`<table class="print-table"><thead>
         <tr><th width="25%">棟別</th><th width="15%">項目數</th><th width="15%">需修繕</th><th width="15%">待複查</th><th width="15%">待確認</th><th width="15%">完成</th></tr>
       </thead><tbody>`;
-    bldNames.forEach(n=>{
-      const b=row.bldMap[n];
-      const bad=b.repair+b.recheck;
-      html+=`<tr style="${bad>0?'font-weight:700;color:#A32D2D':''}">
-        <td>${n}</td>
-        <td style="text-align:center">${b.total}</td>
-        <td style="text-align:center">${b.repair||'—'}</td>
-        <td style="text-align:center">${b.recheck||'—'}</td>
-        <td style="text-align:center">${b.pending||'—'}</td>
-        <td style="text-align:center">${(b.done+b.ok)||'—'}</td>
+      bldNames.forEach(n=>{
+        const b=row.bldMap[n];
+        const bad=b.repair+b.recheck;
+        html+=`<tr style="${bad>0?'font-weight:700;color:#A32D2D':''}">
+          <td>${n}</td>
+          <td style="text-align:center">${b.total}</td>
+          <td style="text-align:center">${b.repair||'—'}</td>
+          <td style="text-align:center">${b.recheck||'—'}</td>
+          <td style="text-align:center">${b.pending||'—'}</td>
+          <td style="text-align:center">${(b.done+b.ok)||'—'}</td>
+        </tr>`;
+      });
+      html+=`<tr style="background:#f5f5f5;font-weight:700">
+        <td>全棟合計</td>
+        <td style="text-align:center">${row.total}</td>
+        <td style="text-align:center;color:${row.repair>0?'#A32D2D':'#aaa'}">${row.repair||'—'}</td>
+        <td style="text-align:center;color:${row.recheck>0?'#854F0B':'#aaa'}">${row.recheck||'—'}</td>
+        <td style="text-align:center;color:#185FA5">${row.pending||'—'}</td>
+        <td style="text-align:center;color:#3B6D11">${(row.done+row.ok)||'—'}</td>
       </tr>`;
-    });
-    html+=`<tr style="background:#f5f5f5;font-weight:700">
-      <td>全棟合計</td>
-      <td style="text-align:center">${row.total}</td>
-      <td style="text-align:center;color:${row.repair>0?'#A32D2D':'#aaa'}">${row.repair||'—'}</td>
-      <td style="text-align:center;color:${row.recheck>0?'#854F0B':'#aaa'}">${row.recheck||'—'}</td>
-      <td style="text-align:center;color:#185FA5">${row.pending||'—'}</td>
-      <td style="text-align:center;color:#3B6D11">${(row.done+row.ok)||'—'}</td>
-    </tr>`;
-    html+=`</tbody></table></div>`;
+      html+=`</tbody></table>`;
+    }
+    html+=`</div>`;
   });
 
   document.getElementById('print-area').innerHTML=html;

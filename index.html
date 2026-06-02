@@ -1287,19 +1287,32 @@ function rptSetStatus(key, status){
   document.querySelectorAll('.ri-edit-panel').forEach(p=>p.remove());
 }
 
+function calcRawCnt(){
+  // Count items by status, ignoring reportFilter (only exclude hiddenItems + reportHidden)
+  const c={repair:0,recheck:0,done:0,ok:0,pending:0};
+  allKeys.forEach(k=>{
+    if(hiddenItems.has(k))return;
+    if(reportHidden.has(k))return;
+    const s=chk[k]||'';
+    if(c[s]!==undefined)c[s]++; else c.pending++;
+  });
+  return c;
+}
+
 function updReportStats(){
-  const c=calcCnt();
+  const raw=calcRawCnt(); // always use raw (filter-independent) counts for display
+  const visibleTotal=allKeys.filter(k=>!hiddenItems.has(k)&&!reportHidden.has(k)).length;
   const set=e=>{const el=document.getElementById(e[0]);if(el)el.textContent=e[1];};
-  [['rfc-all', allKeys.length-reportHidden.size],
-   ['rfc-issues', c.repair+c.recheck],
-   ['rfc-repair', c.repair],
-   ['rfc-recheck', c.recheck],
-   ['rfc-active', c.repair+c.recheck+c.pending],
-   ['rms-repair', c.repair],
-   ['rms-recheck', c.recheck],
-   ['rms-done', c.done],
-   ['rms-ok', c.ok],
-   ['rms-pending', c.pending]].forEach(set);
+  [['rfc-all',    visibleTotal],
+   ['rfc-issues', raw.repair+raw.recheck],
+   ['rfc-repair', raw.repair],
+   ['rfc-recheck',raw.recheck],
+   ['rfc-active', raw.repair+raw.recheck+raw.pending],
+   ['rms-repair', raw.repair],
+   ['rms-recheck',raw.recheck],
+   ['rms-done',   raw.done],
+   ['rms-ok',     raw.ok],
+   ['rms-pending',raw.pending]].forEach(set);
 }
 
 function delReportItem(key){
@@ -1346,10 +1359,11 @@ function openReport(){
   reportFilter='all';
   const now=new Date();
   const ts=now.getFullYear()+'/'+(now.getMonth()+1).toString().padStart(2,'0')+'/'+now.getDate().toString().padStart(2,'0')+' '+now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0');
-  const cnt=calcCnt();
+  const cnt=calcRawCnt();
+  const visTotal=allKeys.filter(k=>!hiddenItems.has(k)).length;
 
   const filterBar=`<div class="report-filters" id="rpt-filter-bar">
-    <button class="rf-btn active" data-f="all"     onclick="filterReport('all')"    >全部<span class="rf-count" id="rfc-all">${allKeys.length}</span></button>
+    <button class="rf-btn active" data-f="all"     onclick="filterReport('all')"    >全部<span class="rf-count" id="rfc-all">${visTotal}</span></button>
     <button class="rf-btn"        data-f="issues"   onclick="filterReport('issues')"  >有問題<span class="rf-count" id="rfc-issues">${cnt.repair+cnt.recheck}</span></button>
     <button class="rf-btn"        data-f="repair"   onclick="filterReport('repair')"  >需修繕<span class="rf-count" id="rfc-repair">${cnt.repair}</span></button>
     <button class="rf-btn"        data-f="recheck"  onclick="filterReport('recheck')" >待複查<span class="rf-count" id="rfc-recheck">${cnt.recheck}</span></button>

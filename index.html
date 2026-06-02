@@ -209,11 +209,24 @@ body{background:var(--c-bg3);color:var(--c-text);font-family:-apple-system,Blink
 .ri-status-opt.so-recheck.active{background:var(--c-amber-bg);color:var(--c-amber);border-color:var(--c-amber)}
 .ri-status-opt.so-repair.active{background:var(--c-red-bg);color:var(--c-red);border-color:var(--c-red)}
 .ri-status-opt.so-done.active{background:var(--c-blue-bg);color:var(--c-blue);border-color:var(--c-blue)}
-/* Stats detail for pump */
+/* Stats detail table */
 .stats-detail-tbl{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:2px}
 .stats-detail-tbl th{background:var(--c-bg3);padding:4px 7px;text-align:left;font-size:10px;color:var(--c-text2);border-bottom:1px solid var(--c-border)}
 .stats-detail-tbl td{padding:4px 7px;border-bottom:.5px solid var(--c-border);font-size:12px;vertical-align:middle}
 .stats-detail-tbl tr:last-child td{border-bottom:none}
+.stats-body-row.custom-row{background:var(--c-blue-bg)}
+.stats-edit-tr td{background:var(--c-bg2);padding:4px 8px 7px}
+.stats-cat-hd{cursor:pointer}
+.stats-cat-tog{font-size:10px;color:var(--c-text3);transition:transform .2s;display:inline-block;width:14px}
+.stats-cat-tog.open{transform:rotate(90deg)}
+/* Stats add form */
+.stats-add-form{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:6px 12px;background:var(--c-blue-bg);border-bottom:1px solid var(--c-border)}
+.stats-add-form select,.stats-add-form input{font-size:12px;padding:4px 8px;border:1px solid var(--c-border2);border-radius:6px;background:var(--c-bg);color:var(--c-text);outline:none}
+.stats-add-form input{flex:1;min-width:120px}
+.stats-add-lbl{font-size:11px;color:var(--c-blue);font-weight:600;white-space:nowrap}
+.sa-btn{font-size:11px;padding:4px 10px;border-radius:6px;border:none;cursor:pointer;font-weight:600;white-space:nowrap;-webkit-tap-highlight-color:transparent}
+.sa-btn-ok{background:var(--c-blue);color:#fff}
+.sa-btn-cancel{background:var(--c-bg3);color:var(--c-text2);border:1px solid var(--c-border2)}
 
 /* ── Lux meter ── */
 .fab3{position:fixed;bottom:68px;right:16px;background:var(--c-teal);color:#fff;border:none;border-radius:50px;padding:10px 16px;font-size:13px;font-weight:600;cursor:pointer;z-index:200;box-shadow:0 4px 16px rgba(0,0,0,.2);-webkit-tap-highlight-color:transparent}
@@ -740,8 +753,14 @@ let chk = {}; // {key: '' | 'ok' | 'recheck' | 'repair' | 'done'}
 let ext = {}; // {extKey: {exp:string, pressure:boolean}}
 let luxData = {}; // {key: number}  — measured lux per item
 let allKeys = [];
+let customItems = []; // [{id,cat,bid,bldName,label,status}] — user-added items in stats
+let statsHidden = new Set(); // keys hidden in current stats session
+let _statsExpanded = new Set(); // which catKeys are expanded in stats modal
+const CUSTOM_KEY = 'fire_custom_v1';
 function mkKey(bid,ci,ii){ return bid+'|'+ci+'|'+ii }
 function mkExtKey(bid,fl){ return 'ext|'+bid+'|'+fl }
+function saveCustom(){ try{localStorage.setItem(CUSTOM_KEY,JSON.stringify(customItems));}catch(e){} }
+function loadCustom(){ try{const d=localStorage.getItem(CUSTOM_KEY);if(d)customItems=JSON.parse(d);}catch(e){} }
 
 // ── Lux spec per category (at 1 m: cd = lux numerically) ─────────────────────
 const LUX_SPEC = {
@@ -1415,16 +1434,15 @@ function copyReport(){
 }
 
 // ── Category quantity stats ────────────────────────────────────────────────────
-// Categories that show each item individually (unique/descriptive, non-repeating)
+// Categories expanded by default (unique/descriptive items)
 const CATS_ITEM_DETAIL = new Set(['pump','alarm','smoke']);
 
 function buildCatStats(){
-  // Returns ordered array of { catKey, cat, total, bldMap, repair, recheck, done, ok, pending, detailItems? }
   const catOrder = Object.keys(CATS);
   const map = {};
   BLDS.forEach(b=>{
     b.cats.forEach((cg,ci)=>{
-      if(!map[cg.cat]) map[cg.cat]={total:0,repair:0,recheck:0,done:0,ok:0,pending:0,bldMap:{},detailItems:[]};
+      if(!map[cg.cat]) map[cg.cat]={total:0,repair:0,recheck:0,done:0,ok:0,pending:0,bldMap:{},allItems:[]};
       const st = map[cg.cat];
       if(!st.bldMap[b.name]) st.bldMap[b.name]={total:0,repair:0,recheck:0,done:0,ok:0,pending:0};
       const bst = st.bldMap[b.name];
@@ -1435,99 +1453,238 @@ function buildCatStats(){
         const bucket = s||'pending';
         st[bucket]=(st[bucket]||0)+1;
         bst[bucket]=(bst[bucket]||0)+1;
-        if(CATS_ITEM_DETAIL.has(cg.cat)){
-          st.detailItems.push({bld:b.name, label:it.label, status:s, key:k});
-        }
+        st.allItems.push({bld:b.name, bid:b.id, label:it.label, status:s, key:k, isCustom:false});
       });
     });
+  });
+  // Append custom items
+  customItems.forEach(ci=>{
+    if(!map[ci.cat]) map[ci.cat]={total:0,repair:0,recheck:0,done:0,ok:0,pending:0,bldMap:{},allItems:[]};
+    const st=map[ci.cat];
+    const s=ci.status||'';
+    st.total++;
+    const bucket=s||'pending';
+    st[bucket]=(st[bucket]||0)+1;
+    if(!st.bldMap[ci.bldName]) st.bldMap[ci.bldName]={total:0,repair:0,recheck:0,done:0,ok:0,pending:0};
+    st.bldMap[ci.bldName].total++;
+    st.bldMap[ci.bldName][bucket]=(st.bldMap[ci.bldName][bucket]||0)+1;
+    st.allItems.push({bld:ci.bldName, bid:ci.bid, label:ci.label, status:s,
+      key:'cust_'+ci.id, isCustom:true, customId:ci.id});
   });
   return catOrder.filter(k=>map[k]).map(k=>({catKey:k, cat:CATS[k], ...map[k]}));
 }
 
+// Encode key safe for use in HTML attributes (no quotes needed inside onclick)
+function _sk(key){ return key.replace(/'/g,'\\x27'); }
+
+function renderStatsItemRowHTML(item){
+  const sc=item.status==='repair'?'sp-r':item.status==='recheck'?'sp-a':
+           item.status==='done'||item.status==='ok'?'sp-g':'sp-b';
+  const bold=item.status==='repair'||item.status==='recheck';
+  const custBg=item.isCustom?'background:var(--c-blue-bg)':'';
+  const custTag=item.isCustom?` <span style="font-size:9px;color:var(--c-blue);font-weight:600">[自訂]</span>`:'';
+  const delFn=item.isCustom?`statsDelCustom('${_sk(item.customId)}')`:`statsDelItem('${_sk(item.key)}')`;
+  return `<tr class="stats-body-row${item.isCustom?' custom-row':''}" data-skey="${item.key}" style="${custBg}">
+    <td style="${bold?'font-weight:600':'color:var(--c-text2)'}">${item.bld}${custTag}</td>
+    <td style="${bold?'font-weight:600':'color:var(--c-text)'}">${item.label}</td>
+    <td><span class="stats-pill ${sc}" data-sbadge="${item.key}">${STATUS_LABEL[item.status]}</span></td>
+    <td style="text-align:center;white-space:nowrap">
+      <button class="ri-edit-btn-ico" onclick="statsEditItem('${_sk(item.key)}')" title="修改狀態">✎</button>
+      <button class="ri-edit-btn-ico" onclick="${delFn}" title="移除" style="color:var(--c-red)">✕</button>
+    </td>
+  </tr>`;
+}
+
+function refreshStatsCat(catKey){
+  const stats=buildCatStats();
+  const row=stats.find(r=>r.catKey===catKey);
+  if(!row) return;
+  const tbody=document.getElementById('stats-tbody-'+catKey);
+  if(!tbody) return;
+  tbody.innerHTML=row.allItems
+    .filter(item=>!statsHidden.has(item.key))
+    .map(item=>renderStatsItemRowHTML(item))
+    .join('');
+  // Update header counts
+  const hdr=document.getElementById('stats-hdr-'+catKey);
+  if(hdr){
+    const pills=['repair','recheck','pending','done','ok'];
+    pills.forEach(p=>{
+      const el=hdr.querySelector('[data-sc="'+p+'"]');
+      if(el) el.textContent=row[p]||0;
+    });
+  }
+}
+
 function renderStatsHTML(stats){
-  const total = stats.reduce((s,r)=>s+r.total,0);
-  const totalRepair = stats.reduce((s,r)=>s+r.repair,0);
-  const totalRecheck = stats.reduce((s,r)=>s+r.recheck,0);
-  const totalPending = stats.reduce((s,r)=>s+r.pending,0);
-  const totalDone = stats.reduce((s,r)=>s+r.done,0);
-  const totalOk = stats.reduce((s,r)=>s+r.ok,0);
+  const total  = stats.reduce((s,r)=>s+r.total,0);
+  const rp     = stats.reduce((s,r)=>s+r.repair,0);
+  const rc     = stats.reduce((s,r)=>s+r.recheck,0);
+  const pd     = stats.reduce((s,r)=>s+r.pending,0);
+  const dn     = stats.reduce((s,r)=>s+r.done,0);
+  const ok     = stats.reduce((s,r)=>s+r.ok,0);
 
   let h=`<div style="padding:12px 14px 4px">
     <div style="font-size:12px;color:var(--c-text2);margin-bottom:10px">
       共 <b>${total}</b> 個缺失項目　
-      <span class="stats-pill sp-r">需修繕 ${totalRepair}</span>
-      <span class="stats-pill sp-a">待複查 ${totalRecheck}</span>
-      <span class="stats-pill sp-b">待確認 ${totalPending}</span>
-      <span class="stats-pill sp-g">已完修 ${totalDone}　正常 ${totalOk}</span>
+      <span class="stats-pill sp-r">需修繕 ${rp}</span>
+      <span class="stats-pill sp-a">待複查 ${rc}</span>
+      <span class="stats-pill sp-b">待確認 ${pd}</span>
+      <span class="stats-pill sp-g">已完修 ${dn}　正常 ${ok}</span>
     </div>`;
 
   stats.forEach(row=>{
-    h+=`<div class="stats-cat-hd">
+    const expanded = _statsExpanded.has(row.catKey) || CATS_ITEM_DETAIL.has(row.catKey);
+    h+=`<div class="stats-cat-hd" id="stats-hdr-${row.catKey}" onclick="statsToggle('${row.catKey}')">
+      <span class="stats-cat-tog${expanded?' open':''}" id="stats-tog-${row.catKey}">▶</span>
       <span>${row.cat.ico} ${row.cat.name}</span>
-      <span style="font-size:11px;color:var(--c-text2);flex:1">合計 ${row.total} 項</span>`;
-    if(row.repair>0) h+=`<span class="stats-pill sp-r">需修繕 ${row.repair}</span>`;
-    if(row.recheck>0) h+=`<span class="stats-pill sp-a">待複查 ${row.recheck}</span>`;
-    if(row.pending>0) h+=`<span class="stats-pill sp-b">待確認 ${row.pending}</span>`;
-    if(row.done>0)   h+=`<span class="stats-pill sp-g">已完修 ${row.done}</span>`;
-    if(row.ok>0)     h+=`<span class="stats-pill sp-g">正常 ${row.ok}</span>`;
+      <span style="font-size:11px;color:var(--c-text2);flex:1;margin-left:4px">合計 ${row.total} 項</span>`;
+    if(row.repair>0)  h+=`<span class="stats-pill sp-r" data-sc="repair">${row.repair}</span>`;
+    if(row.recheck>0) h+=`<span class="stats-pill sp-a" data-sc="recheck">${row.recheck}</span>`;
+    if(row.pending>0) h+=`<span class="stats-pill sp-b" data-sc="pending">${row.pending}</span>`;
+    if(row.done>0)    h+=`<span class="stats-pill sp-g" data-sc="done">${row.done}</span>`;
+    h+=`<button class="sa-btn sa-btn-ok" style="padding:2px 7px;font-size:10px;margin-left:4px"
+        onclick="event.stopPropagation();statsOpenAdd('${row.catKey}')">＋</button>`;
     h+=`</div>`;
 
-    if(CATS_ITEM_DETAIL.has(row.catKey) && row.detailItems.length > 0){
-      // Individual item listing (pump / alarm / smoke)
-      h+=`<table class="stats-detail-tbl"><thead><tr>
-        <th width="20%">棟別</th><th width="55%">項目名稱</th><th width="25%">狀態</th>
-      </tr></thead><tbody>`;
-      row.detailItems.forEach(item=>{
-        const sc=item.status==='repair'?'sp-r':item.status==='recheck'?'sp-a':item.status==='done'||item.status==='ok'?'sp-g':'sp-b';
-        const rowBold=item.status==='repair'||item.status==='recheck'?'font-weight:700':'';
-        h+=`<tr style="${rowBold}">
-          <td>${item.bld}</td>
-          <td>${item.label}</td>
-          <td><span class="stats-pill ${sc}">${STATUS_LABEL[item.status]}</span></td>
-        </tr>`;
-      });
-      h+=`</tbody></table>`;
-    } else {
-      // Aggregated building table
-      const bldNames = Object.keys(row.bldMap);
-      h+=`<table class="stats-tbl"><thead><tr>
-        <th width="22%">棟別</th><th width="12%">項目數</th>
-        <th width="16%">需修繕</th><th width="16%">待複查</th>
-        <th width="16%">待確認</th><th width="18%">已完修/正常</th>
-      </tr></thead><tbody>`;
-      bldNames.forEach(n=>{
-        const b=row.bldMap[n];
-        const bad=b.repair+b.recheck;
-        h+=`<tr>
-          <td style="${bad>0?'color:var(--c-red);font-weight:600':''}">${n}</td>
-          <td style="text-align:center">${b.total}</td>
-          <td style="text-align:center;color:${b.repair>0?'var(--c-red)':'var(--c-text3)'};font-weight:${b.repair>0?'700':'400'}">${b.repair||'—'}</td>
-          <td style="text-align:center;color:${b.recheck>0?'var(--c-amber)':'var(--c-text3)'};font-weight:${b.recheck>0?'700':'400'}">${b.recheck||'—'}</td>
-          <td style="text-align:center;color:${b.pending>0?'var(--c-blue)':'var(--c-text3)'}">${b.pending||'—'}</td>
-          <td style="text-align:center;color:var(--c-grn)">${(b.done+b.ok)||'—'}</td>
-        </tr>`;
-      });
-      h+=`<tr style="background:var(--c-bg2);font-weight:700">
-        <td>合計</td>
-        <td style="text-align:center">${row.total}</td>
-        <td style="text-align:center;color:${row.repair>0?'var(--c-red)':'var(--c-text3)'}">${row.repair||'—'}</td>
-        <td style="text-align:center;color:${row.recheck>0?'var(--c-amber)':'var(--c-text3)'}">${row.recheck||'—'}</td>
-        <td style="text-align:center;color:${row.pending>0?'var(--c-blue)':'var(--c-text3)'}">${row.pending||'—'}</td>
-        <td style="text-align:center;color:var(--c-grn)">${(row.done+row.ok)||'—'}</td>
-      </tr>`;
-      h+=`</tbody></table>`;
-    }
+    // Add-item form area
+    h+=`<div id="stats-add-area-${row.catKey}"></div>`;
+
+    // Items table
+    h+=`<div id="stats-sec-${row.catKey}" style="display:${expanded?'block':'none'}">
+      <table class="stats-detail-tbl"><thead><tr>
+        <th width="18%">棟別</th><th width="47%">項目名稱</th><th width="20%">狀態</th><th width="15%">操作</th>
+      </tr></thead><tbody id="stats-tbody-${row.catKey}">`;
+    row.allItems.forEach(item=>{
+      if(statsHidden.has(item.key)) return;
+      h+=renderStatsItemRowHTML(item);
+    });
+    h+=`</tbody></table></div>`;
   });
   h+=`</div>`;
   return h;
 }
 
+// ── Stats interactions ─────────────────────────────────────────────────────────
+function statsToggle(catKey){
+  const sec=document.getElementById('stats-sec-'+catKey);
+  const tog=document.getElementById('stats-tog-'+catKey);
+  if(!sec) return;
+  const open=sec.style.display==='block';
+  sec.style.display=open?'none':'block';
+  if(tog) tog.classList.toggle('open',!open);
+  if(!open) _statsExpanded.add(catKey); else _statsExpanded.delete(catKey);
+}
+
+function statsEditItem(key){
+  document.querySelectorAll('.stats-edit-tr').forEach(r=>r.remove());
+  let targetRow=null;
+  document.querySelectorAll('.stats-body-row').forEach(r=>{ if(r.getAttribute('data-skey')===key) targetRow=r; });
+  if(!targetRow) return;
+  const isCustom=key.startsWith('cust_');
+  const cur=isCustom
+    ? (customItems.find(c=>c.id===key.slice(5))||{}).status||''
+    : chk[key]||'';
+  const tr=document.createElement('tr');
+  tr.className='stats-edit-tr';
+  tr.innerHTML=`<td colspan="4" style="padding:4px 8px 7px;background:var(--c-bg2)">
+    <div style="display:flex;flex-wrap:wrap;gap:5px">
+      ${STATUS_CYCLE.map(s=>`<button class="ri-status-opt ${SO_CLS[s]}${s===cur?' active':''}"
+        onclick="statsSetStatus('${_sk(key)}','${s}')">${STATUS_LABEL[s]}</button>`).join('')}
+    </div></td>`;
+  targetRow.after(tr);
+}
+
+function statsSetStatus(key, status){
+  const isCustom=key.startsWith('cust_');
+  if(isCustom){
+    const item=customItems.find(c=>c.id===key.slice(5));
+    if(item){item.status=status; saveCustom();}
+  } else {
+    chk[key]=status; saveChk(); updStats();
+    const mb=document.getElementById('st-'+key);
+    if(mb){mb.textContent=STATUS_MARK[status];mb.className='st '+STATUS_CLS[status];}
+    // Sync report modal badge if open
+    const rb=document.getElementById('ri-badge-'+key);
+    if(rb){
+      const cls=status==='repair'?'ri-repair':status==='recheck'?'ri-recheck':status==='done'?'ri-done':status==='ok'?'ri-ok':'ri-no';
+      rb.textContent='['+STATUS_LABEL[status]+']'; rb.className=cls;
+    }
+  }
+  // Update badge in stats
+  document.querySelectorAll('[data-sbadge="'+key+'"]').forEach(b=>{
+    const sc=status==='repair'?'sp-r':status==='recheck'?'sp-a':status==='done'||status==='ok'?'sp-g':'sp-b';
+    b.className='stats-pill '+sc; b.textContent=STATUS_LABEL[status];
+  });
+  // Update row style
+  document.querySelectorAll('.stats-body-row').forEach(r=>{
+    if(r.getAttribute('data-skey')!==key) return;
+    const bold=status==='repair'||status==='recheck';
+    const cells=r.querySelectorAll('td');
+    if(cells[0]) cells[0].style.fontWeight=bold?'600':'';
+    if(cells[1]) cells[1].style.fontWeight=bold?'600':'';
+  });
+  document.querySelectorAll('.stats-edit-tr').forEach(r=>r.remove());
+}
+
+function statsDelItem(key){
+  statsHidden.add(key);
+  document.querySelectorAll('.stats-body-row').forEach(r=>{ if(r.getAttribute('data-skey')===key) r.style.display='none'; });
+  document.querySelectorAll('.stats-edit-tr').forEach(r=>r.remove());
+}
+
+function statsDelCustom(id){
+  customItems=customItems.filter(c=>c.id!==id);
+  saveCustom();
+  const key='cust_'+id;
+  document.querySelectorAll('.stats-body-row').forEach(r=>{ if(r.getAttribute('data-skey')===key) r.style.display='none'; });
+  document.querySelectorAll('.stats-edit-tr').forEach(r=>r.remove());
+}
+
+function statsOpenAdd(catKey){
+  // Close any existing add form
+  document.querySelectorAll('.stats-add-form').forEach(f=>f.remove());
+  const area=document.getElementById('stats-add-area-'+catKey);
+  if(!area) return;
+  const bldOpts=BLDS.map(b=>`<option value="${b.id}" data-name="${b.name}">${b.name}</option>`).join('');
+  const div=document.createElement('div');
+  div.className='stats-add-form';
+  div.id='stats-add-form-'+catKey;
+  div.innerHTML=`<span class="stats-add-lbl">＋ 新增項目</span>
+    <select id="sa-bld-${catKey}">${bldOpts}</select>
+    <input type="text" id="sa-lbl-${catKey}" placeholder="項目說明，例：5F 出口燈燈具損壞">
+    <button class="sa-btn sa-btn-ok" onclick="confirmStatsAdd('${catKey}')">新增</button>
+    <button class="sa-btn sa-btn-cancel" onclick="this.closest('.stats-add-form').remove()">取消</button>`;
+  area.after(div);
+  // Auto-expand section
+  const sec=document.getElementById('stats-sec-'+catKey);
+  const tog=document.getElementById('stats-tog-'+catKey);
+  if(sec&&sec.style.display==='none'){sec.style.display='block';if(tog)tog.classList.add('open');_statsExpanded.add(catKey);}
+  setTimeout(()=>document.getElementById('sa-lbl-'+catKey)?.focus(),50);
+}
+
+function confirmStatsAdd(catKey){
+  const bldSel=document.getElementById('sa-bld-'+catKey);
+  const lblInp=document.getElementById('sa-lbl-'+catKey);
+  if(!bldSel||!lblInp) return;
+  const bid=bldSel.value;
+  const bldName=bldSel.options[bldSel.selectedIndex].dataset.name||bid;
+  const label=lblInp.value.trim();
+  if(!label){lblInp.focus();lblInp.style.borderColor='var(--c-red)';return;}
+  const id=Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+  customItems.push({id, cat:catKey, bid, bldName, label, status:''});
+  saveCustom();
+  document.getElementById('stats-add-form-'+catKey)?.remove();
+  refreshStatsCat(catKey);
+}
+
 function openStats(){
-  const stats = buildCatStats();
-  document.getElementById('stats-body').innerHTML = renderStatsHTML(stats);
+  statsHidden=new Set();
+  const stats=buildCatStats();
+  document.getElementById('stats-body').innerHTML=renderStatsHTML(stats);
   document.getElementById('stats-bg').className='modal-bg show';
 }
-function closeStats(){ document.getElementById('stats-bg').className='modal-bg'; }
+function closeStats(){ document.getElementById('stats-bg').className='modal-bg'; document.querySelectorAll('.stats-edit-tr,.stats-add-form').forEach(e=>e.remove()); }
 
 function printStatsToPDF(){
   const stats = buildCatStats();
@@ -1566,19 +1723,23 @@ function printStatsToPDF(){
   // Per-category detail tables
   stats.forEach(row=>{
     const bldNames=Object.keys(row.bldMap);
+    const visItems=row.allItems.filter(item=>!statsHidden.has(item.key));
     html+=`<div class="print-bld-section">
       <div class="print-bld-title">${row.cat.ico} ${row.cat.name}　<span style="font-size:12px;font-weight:400">（法規：${row.cat.law}）</span></div>`;
 
-    if(CATS_ITEM_DETAIL.has(row.catKey) && row.detailItems.length > 0){
-      // Individual item listing
+    if(CATS_ITEM_DETAIL.has(row.catKey)){
+      // Individual item listing (pump / alarm / smoke + custom items)
       html+=`<table class="print-table"><thead>
-        <tr><th width="20%">棟別</th><th width="55%">項目名稱</th><th width="25%">狀態</th></tr>
+        <tr><th width="20%">棟別</th><th width="52%">項目名稱</th><th width="8%"></th><th width="20%">狀態</th></tr>
       </thead><tbody>`;
-      row.detailItems.forEach(item=>{
+      visItems.forEach(item=>{
         const bad=item.status==='repair'||item.status==='recheck';
         const sc=item.status==='repair'?'print-status-repair':item.status==='recheck'?'print-status-recheck':item.status==='done'||item.status==='ok'?'print-status-ok':'print-status-pending';
         html+=`<tr style="${bad?'font-weight:700':''}">
-          <td>${item.bld}</td><td>${item.label}</td><td class="${sc}">${STATUS_LABEL[item.status]}</td>
+          <td>${item.bld}</td>
+          <td>${item.label}${item.isCustom?' <em style="font-size:9px;color:#185FA5">[自訂]</em>':''}</td>
+          <td></td>
+          <td class="${sc}">${STATUS_LABEL[item.status]}</td>
         </tr>`;
       });
       html+=`</tbody></table>`;
@@ -1607,6 +1768,15 @@ function printStatsToPDF(){
         <td style="text-align:center;color:#185FA5">${row.pending||'—'}</td>
         <td style="text-align:center;color:#3B6D11">${(row.done+row.ok)||'—'}</td>
       </tr>`;
+      // If there are custom items for this category, show them as appendix rows
+      const custItems=visItems.filter(i=>i.isCustom);
+      if(custItems.length>0){
+        html+=`<tr style="background:#E6F1FB;font-style:italic"><td colspan="6" style="padding:4px 8px;font-size:11px;color:#185FA5">自訂新增項目：</td></tr>`;
+        custItems.forEach(item=>{
+          const sc=item.status==='repair'?'print-status-repair':item.status==='recheck'?'print-status-recheck':item.status==='done'||item.status==='ok'?'print-status-ok':'print-status-pending';
+          html+=`<tr><td>${item.bld}</td><td colspan="4">${item.label}</td><td class="${sc}">${STATUS_LABEL[item.status]}</td></tr>`;
+        });
+      }
       html+=`</tbody></table>`;
     }
     html+=`</div>`;
@@ -1619,7 +1789,7 @@ function printStatsToPDF(){
 
 function confirmReset(){
   if(confirm('確定要重置所有勾選與滅火器查核記錄嗎？此操作無法復原。')){
-    chk={};ext={};luxData={};saveChk();saveExt();saveLux();
+    chk={};ext={};luxData={};customItems=[];saveChk();saveExt();saveLux();saveCustom();
     document.getElementById('content').innerHTML='';
     allKeys=[];
     render();
@@ -1630,9 +1800,9 @@ function confirmReset(){
 // ── Export / Import ───────────────────────────────────────────────────────────
 function exportData(){
   const payload = {
-    version: 2,
+    version: 3,
     exportTime: new Date().toISOString(),
-    meta, chk, ext, luxData
+    meta, chk, ext, luxData, customItems
   };
   const json = JSON.stringify(payload, null, 2);
   const blob = new Blob([json], {type:'application/json'});
@@ -1669,9 +1839,10 @@ function importFromPaste(){
   if(!raw){ msg.style.color='var(--c-red)'; msg.textContent='請貼上 JSON 內容或選擇檔案'; return; }
   try{
     const d = JSON.parse(raw);
-    if(d.chk)   { chk     = d.chk;     saveChk(); }
-    if(d.ext)   { ext     = d.ext;     saveExt(); }
-    if(d.luxData){ luxData = d.luxData; saveLux(); }
+    if(d.chk)        { chk         = d.chk;         saveChk(); }
+    if(d.ext)        { ext         = d.ext;         saveExt(); }
+    if(d.luxData)    { luxData     = d.luxData;     saveLux(); }
+    if(d.customItems){ customItems = d.customItems; saveCustom(); }
     if(d.meta)  {
       meta = Object.assign(meta, d.meta);
       try{ localStorage.setItem(META_KEY, JSON.stringify(meta)); }catch(err){}
@@ -2165,6 +2336,7 @@ loadChk();
 loadExt();
 loadLux();
 loadMeta();
+loadCustom();
 render();
 </script>
 </body>
